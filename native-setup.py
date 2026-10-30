@@ -38,7 +38,10 @@ public class ControlReceiver extends BroadcastReceiver {
 
 FILES['MainActivity.java'] = r'''package app.dorozhka.player;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -46,6 +49,61 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PlaybackPlugin.class);
         super.onCreate(savedInstanceState);
+        getBridge().getWebView().addJavascriptInterface(new SpotifyOAuthBridge(this), "SpotifyOAuth");
+        captureSpotifyCallback(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        captureSpotifyCallback(intent);
+    }
+
+    private void captureSpotifyCallback(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri uri = intent.getData();
+        if ("doroshka".equals(uri.getScheme()) && "spotify-callback".equals(uri.getHost())) {
+            getSharedPreferences("doroshka_oauth", MODE_PRIVATE).edit()
+                .putString("spotify_callback_url", uri.toString()).apply();
+    }
+}
+'''
+
+
+
+FILES['SpotifyOAuthBridge.java'] = r'''package app.dorozhka.player;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.webkit.JavascriptInterface;
+
+public class SpotifyOAuthBridge {
+    private final Context context;
+
+    public SpotifyOAuthBridge(Context context) {
+        this.context = context.getApplicationContext();
+    }
+
+    @JavascriptInterface
+    public String getPendingUrl() {
+        return context.getSharedPreferences("doroshka_oauth", Context.MODE_PRIVATE)
+            .getString("spotify_callback_url", "");
+    }
+
+    @JavascriptInterface
+    public void clearPendingUrl() {
+        context.getSharedPreferences("doroshka_oauth", Context.MODE_PRIVATE).edit()
+            .remove("spotify_callback_url").apply();
+    }
+
+    @JavascriptInterface
+    public void openAuthUrl(String value) {
+        if (value == null || !value.startsWith("https://accounts.spotify.com/authorize")) return;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(value));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
     }
 }
 '''
@@ -936,6 +994,28 @@ if "PlaybackService" not in m:
     print("AndroidManifest.xml обновлён")
 else:
     print("AndroidManifest.xml уже обновлён")
+
+# ---- Spotify OAuth deep link ----
+if 'android:host="spotify-callback"' not in m:
+    activity_re = r'<activity\\b(?=[^>]*android:name="(?:\\.MainActivity|' + re.escape(PKG + '.MainActivity') + r')")[^>]*>'
+    match = re.search(activity_re, m)
+    if not match:
+        sys.exit("Не найдена MainActivity для Spotify OAuth deep link")
+    tag = match.group(0)
+    if 'android:launchMode=' not in tag:
+        tag = tag[:-1] + ' android:launchMode="singleTask">'
+    intent_filter = (
+        '\\n            <intent-filter>\\n'
+        '                <action android:name="android.intent.action.VIEW" />\\n'
+        '                <category android:name="android.intent.category.DEFAULT" />\\n'
+        '                <category android:name="android.intent.category.BROWSABLE" />\\n'
+        '                <data android:scheme="doroshka" android:host="spotify-callback" />\\n'
+        '            </intent-filter>'
+    )
+    m = m[:match.start()] + tag + intent_filter + m[match.end():]
+    with open(MANIFEST, "w", encoding="utf-8") as f:
+        f.write(m)
+    print("Spotify OAuth deep link добавлен в AndroidManifest.xml")
 
 # ---- capacitor.config.json: запросы идут через нативный HTTP (без ограничений CORS) ----
 import json
