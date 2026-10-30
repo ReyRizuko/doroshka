@@ -29,6 +29,8 @@ jobs:
         run: node scripts/check-inline-js.js
       - run: npx cap add android
       - run: npx cap sync android
+      - name: Configure native playback and Spotify deep link
+        run: python3 native-setup.py
       - name: Build
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
