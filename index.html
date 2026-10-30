@@ -1294,7 +1294,7 @@ async function audiusSearch(q){
     return get('/users/'+encodeURIComponent(u.id)+'/tracks?limit=30&sort_method=plays&sort_direction=desc').catch(function(){return [];});
   }));
   var seen={},all=[];
-  trackSets.concat([artistSets]).forEach(function(set){set.forEach(function(t){
+  trackSets.concat(artistSets).forEach(function(set){set.forEach(function(t){
     if(t&&t.id&&t.title&&!seen[t.id]){seen[t.id]=1;all.push(t);}
   });});
   var aliases=terms.map(norm);
@@ -1435,9 +1435,13 @@ $('#yt-open-search').hidden=true;
 var activeProvider='all';
 if(Native){
   var ns=$('#notification-status'),nb=$('#notification-settings-button');
-  Native.getNotificationStatus().then(function(v){
-    ns.textContent=v&&v.granted?'Разрешено':'Разрешение отключено — открой настройки Android';
-  }).catch(function(){ns.textContent='Не удалось проверить разрешение';});
+  function refreshNotificationStatus(){
+    Native.getNotificationStatus().then(function(v){
+      ns.textContent=v&&v.granted?'Разрешено':'Разрешение отключено — открой настройки Android';
+    }).catch(function(){ns.textContent='Не удалось проверить разрешение';});
+  }
+  refreshNotificationStatus();
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshNotificationStatus();});
   nb.addEventListener('click',function(){
     Native.openNotificationSettings().catch(function(){toast('Не удалось открыть настройки уведомлений');});
   });
