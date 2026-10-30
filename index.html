@@ -224,6 +224,13 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 
 /* Единый поиск и компактная панель источников */
 #pane-web .source-switch,#pane-web > .source-panel{display:none!important}
+.provider-filter{display:flex;flex-wrap:wrap;gap:7px;padding:2px 4px}
+.provider-chip{border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:8px 12px;background:rgba(255,255,255,.035);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+.provider-chip.active{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.provider-note{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02)}
+.provider-note p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.provider-note .global-result-title span{font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.global-result-group[hidden]{display:none!important}
 .global-search{display:grid;gap:17px;min-width:0}
 .global-heading{padding:23px 22px 5px;display:grid;gap:7px}
 .global-heading>span{font:600 10px var(--f-mono);letter-spacing:.18em;color:var(--accent)}
@@ -332,13 +339,34 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
             <button class="btn primary" type="submit">Найти</button>
           </form>
           <div id="global-status" class="status" aria-live="polite">Введите название трека или исполнителя.</div>
+          <div class="provider-filter" role="group" aria-label="Фильтр источников">
+            <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все источники</button>
+            <button class="provider-chip" type="button" data-provider="youtube" aria-pressed="false">YouTube</button>
+            <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
+            <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
+            <button class="provider-chip" type="button" data-provider="yandex" aria-pressed="false">Яндекс Музыка</button>
+            <button class="provider-chip" type="button" data-provider="soundcloud" aria-pressed="false">SoundCloud</button>
+            <button class="provider-chip" type="button" data-provider="spotify" aria-pressed="false">Spotify</button>
+            <button class="provider-chip" type="button" data-provider="apple" aria-pressed="false">Apple Music</button>
+            <button class="provider-chip" type="button" data-provider="deezer" aria-pressed="false">Deezer</button>
+            <button class="provider-chip" type="button" data-provider="bandcamp" aria-pressed="false">Bandcamp</button>
+            <button class="provider-chip" type="button" data-provider="vk" aria-pressed="false">VK Музыка</button>
+          </div>
           <details class="global-settings">
             <summary>Настройки источников и API</summary>
             <div id="global-key-settings"></div>
           </details>
           <div class="global-results">
-            <section class="global-result-group"><div class="global-result-title"><h4>YouTube</h4><span>через YouTube Data API</span></div><div id="global-yt-slot"></div></section>
-            <section class="global-result-group"><div class="global-result-title"><h4>Свободная музыка</h4><span>Jamendo · Internet Archive</span></div><div id="global-free-slot"></div></section>
+            <section class="global-result-group" data-provider-group="youtube"><div class="global-result-title"><h4>YouTube</h4><span>поиск через YouTube Data API · воспроизведение официальным встроенным плеером</span></div><div id="global-yt-slot"></div></section>
+            <section class="global-result-group" data-provider-group="jamendo"><div class="global-result-title"><h4>Jamendo</h4><span>свободные аудиотреки · добавление в библиотеку</span></div><div id="global-free-slot"></div></section>
+            <section class="global-result-group provider-note" data-provider-group="archive"><div class="global-result-title"><h4>Internet Archive</h4><span>свободные аудиофайлы</span></div><p>Результаты Internet Archive отображаются в общей группе свободной музыки выше. Список файлов можно открыть и добавить треки в библиотеку.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="yandex"><div class="global-result-title"><h4>Яндекс Музыка</h4><span>интеграция не подключена</span></div><p>Для поиска и воспроизведения внутри Doroshka нужен разрешённый API и авторизация. Сейчас встроенный поиск каталога недоступен; внешняя страница не будет открываться автоматически.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="soundcloud"><div class="global-result-title"><h4>SoundCloud</h4><span>интеграция не подключена</span></div><p>Для поиска нужен доступ к API SoundCloud. Встроенный поиск и воспроизведение пока не подключены.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="spotify"><div class="global-result-title"><h4>Spotify</h4><span>интеграция не подключена</span></div><p>Каталог Spotify требует авторизации через Spotify API; воспроизведение полных треков ограничено самим сервисом. Встроенный поиск пока не подключён. Импорт плейлистов остаётся отдельной функцией библиотеки.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="apple"><div class="global-result-title"><h4>Apple Music</h4><span>интеграция не подключена</span></div><p>Для каталога Apple Music нужен developer token, а воспроизведение — разрешённая подписная интеграция. Пока поиск внутри приложения не подключён.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="deezer"><div class="global-result-title"><h4>Deezer</h4><span>интеграция не подключена</span></div><p>Публичный поиск и воспроизведение зависят от доступности API и прав приложения. Сейчас встроенная интеграция не настроена.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="bandcamp"><div class="global-result-title"><h4>Bandcamp</h4><span>интеграция не подключена</span></div><p>У Bandcamp нет общедоступного универсального API для поиска и потокового воспроизведения сторонним плеером. Поэтому результаты не подменяются ссылками на сайт.</p></section>
+            <section class="global-result-group provider-note" data-provider-group="vk"><div class="global-result-title"><h4>VK Музыка</h4><span>интеграция не подключена</span></div><p>Для встроенного поиска требуется разрешённый VK API и авторизация пользователя. Пока этот источник не подключён.</p></section>
           </div>
         </section>
         <div class="source-switch" role="group" aria-label="Источники музыки">
@@ -1136,17 +1164,32 @@ $('#global-free-slot').appendChild($('#web-status'));
 $('#global-free-slot').appendChild($('#web-au'));
 $('#global-free-slot').appendChild($('#web-res'));
 $('#yt-open-search').hidden=true;
+var activeProvider='all';
+function setProviderFilter(name){
+  activeProvider=name;
+  document.querySelectorAll('[data-provider]').forEach(function(b){
+    var on=b.dataset.provider===name;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
+  document.querySelectorAll('[data-provider-group]').forEach(function(g){
+    g.hidden=name!=='all'&&g.dataset.providerGroup!==name;
+  });
+}
+document.querySelectorAll('[data-provider]').forEach(function(b){
+  b.addEventListener('click',function(){setProviderFilter(b.dataset.provider);});
+});
 $('#global-form').addEventListener('submit',async function(e){
   e.preventDefault();
   var q=$('#global-q').value.trim();if(!q)return;
-  $('#global-status').textContent='Ищу одновременно в доступных источниках…';
+  $('#global-status').textContent='Ищу одновременно во всех подключённых источниках…';
   $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';
   await Promise.allSettled([youtubeSearch(q),webSearch(q)]);
   var yt=$('#yt-status').textContent,free=$('#web-status').textContent;
   var notes=[];
   if(yt)notes.push('YouTube: '+yt);
   if(free)notes.push(free);
-  $('#global-status').textContent=notes.join(' · ');
+  $('#global-status').textContent=notes.join(' · ')+' Остальные каталоги показаны ниже со статусом интеграции.';
 });
 
 /* ---------- дополнительные источники ---------- */
