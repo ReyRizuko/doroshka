@@ -319,16 +319,13 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 
       <div id="pane-sp" role="tabpanel" hidden style="display:grid;gap:12px">
         <div class="how">
-          <h3>Поиск в Spotify</h3>
-          <p>Подключите аккаунт Spotify, чтобы искать треки в каталоге. Воспроизведение будет открываться через официальный плеер Spotify; аудиофайлы приложение не скачивает.</p>
-          <button class="btn primary" id="spotify-connect" type="button">Подключить Spotify</button>
-          <div id="spotify-auth-status" class="status" aria-live="polite">Аккаунт не подключён.</div>
+          <h3>Каталог Spotify</h3>
+          <p>Поиск открывается на официальной странице Spotify. Встроенный поиск через Web API временно отключён: Spotify требует Premium у владельца приложения в Developer Mode. Авторизация в «Дорожке» для этого не нужна.</p>
           <form class="webform" id="spotify-track-form">
-            <input class="search" id="spotify-track-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск треков Spotify" autocomplete="off">
-            <button class="btn" type="submit">Найти</button>
+            <input class="search" id="spotify-track-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск в Spotify" autocomplete="off">
+            <button class="btn primary" type="submit">Открыть поиск</button>
           </form>
-          <div id="spotify-track-results" class="list"></div>
-          <div id="spotify-embed" hidden></div>
+          <p class="hint">Воспроизведение и доступность треков определяются самим Spotify и вашей учётной записью.</p>
         </div>
         <div class="how">
           <h3>Импорт плейлистов</h3>
@@ -1203,113 +1200,19 @@ $('#global-form').addEventListener('submit',async function(e){
   $('#global-status').textContent=notes.join(' · ')+' Остальные каталоги показаны ниже со статусом интеграции.';
 });
 
-/* ---------- Spotify OAuth PKCE и поиск каталога ---------- */
-var SPOTIFY_CLIENT_ID='f4d35555f10f4685b85d9ee85b3f102d';
-var SPOTIFY_NATIVE=!!(window.SpotifyOAuth&&typeof window.SpotifyOAuth.getPendingUrl==='function');
-var SPOTIFY_REDIRECT=SPOTIFY_NATIVE?'doroshka://spotify-callback':location.origin+location.pathname.replace(/\/$/,'')+'/spotify-callback.html';
-var spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||localStorage.getItem('doroshka_spotify_token')||'';
-var spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||localStorage.getItem('doroshka_spotify_expiry')||0);
-function spotifySetStatus(t){var el=$('#spotify-auth-status');if(el)el.textContent=t;}
-function spotifyB64(bytes){return btoa(String.fromCharCode.apply(null,Array.from(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-async function spotifyConnect(){
-  try{
-    var bytes=new Uint8Array(64);crypto.getRandomValues(bytes);
-    var verifier=spotifyB64(bytes);
-    var digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));
-    var challenge=spotifyB64(new Uint8Array(digest));
-    var state=spotifyB64((function(){var a=new Uint8Array(24);crypto.getRandomValues(a);return a;})());
-    sessionStorage.setItem('doroshka_spotify_verifier',verifier);
-    sessionStorage.setItem('doroshka_spotify_state',state);
-    if(SPOTIFY_NATIVE){localStorage.setItem('doroshka_spotify_verifier',verifier);localStorage.setItem('doroshka_spotify_state',state);}
-    var u=new URL('https://accounts.spotify.com/authorize');
-    u.searchParams.set('client_id',SPOTIFY_CLIENT_ID);
-    u.searchParams.set('response_type','code');
-    u.searchParams.set('redirect_uri',SPOTIFY_REDIRECT);
-    u.searchParams.set('code_challenge_method','S256');
-    u.searchParams.set('code_challenge',challenge);
-    u.searchParams.set('state',state);
-    if(SPOTIFY_NATIVE)window.SpotifyOAuth.openAuthUrl(u.toString());else location.href=u.toString();
-  }catch(e){spotifySetStatus('Не удалось начать подключение. Откройте сайт в современном браузере через HTTPS.');}
-}
-function spotifyAccessToken(){
-  if(spotifyToken&&Date.now()<spotifyExpiry-60000)return Promise.resolve(spotifyToken);
-  spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||localStorage.getItem('doroshka_spotify_token')||'';
-  spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||localStorage.getItem('doroshka_spotify_expiry')||0);
-  if(spotifyToken&&Date.now()<spotifyExpiry-60000)return Promise.resolve(spotifyToken);
-  spotifySetStatus('Срок подключения истёк. Подключите Spotify снова.');
-  return Promise.reject(new Error('Spotify session expired'));
-}
-async function spotifyHandleNativeCallback(raw){
-  try{
-    var callback=new URL(raw);
-    if(callback.protocol!=='doroshka:'||callback.hostname!=='spotify-callback')throw new Error('Некорректный адрес возврата');
-    var params=callback.searchParams;
-    var error=params.get('error');
-    if(error)throw new Error('Spotify отменил подключение: '+error);
-    var code=params.get('code'),state=params.get('state');
-    var expected=sessionStorage.getItem('doroshka_spotify_state')||localStorage.getItem('doroshka_spotify_state');
-    var verifier=sessionStorage.getItem('doroshka_spotify_verifier')||localStorage.getItem('doroshka_spotify_verifier');
-    if(!code||!state||!expected||state!==expected||!verifier)throw new Error('Не удалось проверить OAuth-ответ. Начните подключение заново.');
-    spotifySetStatus('Получаю токен Spotify…');
-    var body=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,grant_type:'authorization_code',code:code,redirect_uri:SPOTIFY_REDIRECT,code_verifier:verifier});
-    var response=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-    var data=await response.json();
-    if(!response.ok||!data.access_token)throw new Error(data.error_description||data.error||('HTTP '+response.status));
-    spotifyToken=data.access_token;spotifyExpiry=Date.now()+(data.expires_in||3600)*1000;
-    sessionStorage.setItem('doroshka_spotify_token',spotifyToken);
-    sessionStorage.setItem('doroshka_spotify_expiry',String(spotifyExpiry));
-    if(SPOTIFY_NATIVE){localStorage.setItem('doroshka_spotify_token',spotifyToken);localStorage.setItem('doroshka_spotify_expiry',String(spotifyExpiry));}
-    sessionStorage.removeItem('doroshka_spotify_verifier');sessionStorage.removeItem('doroshka_spotify_state');
-    localStorage.removeItem('doroshka_spotify_verifier');localStorage.removeItem('doroshka_spotify_state');
-    spotifySetStatus('Spotify подключён. Можно искать треки.');
-  }catch(e){spotifySetStatus(e.message||'Ошибка авторизации Spotify.');}
-}
-if(SPOTIFY_NATIVE){
-  setInterval(function(){
-    try{
-      var pending=window.SpotifyOAuth.getPendingUrl();
-      if(pending){window.SpotifyOAuth.clearPendingUrl();spotifyHandleNativeCallback(pending);}
-    }catch(e){spotifySetStatus('Не удалось обработать возврат из Spotify.');}
-  },700);
-}
-async function spotifySearchTracks(q){
-  var token=await spotifyAccessToken();
-  var u='https://api.spotify.com/v1/search?type=track&limit=10&q='+encodeURIComponent(q);
-  var r=await fetch(u,{headers:{Authorization:'Bearer '+token}});
-  var data=await r.json().catch(function(){return {};});
-  if(!r.ok){
-    if(r.status===401){sessionStorage.removeItem('doroshka_spotify_token');localStorage.removeItem('doroshka_spotify_token');spotifyToken='';}
-    var detail=data&&data.error&&(data.error.message||data.error.error_description||data.error.reason)||'без пояснения от Spotify';
-    throw new Error('Spotify API: HTTP '+r.status+' — '+detail);
-  }
-  return data.tracks&&data.tracks.items||[];
-}
-function renderSpotifyTracks(items){
-  $('#spotify-track-results').innerHTML=items.map(function(t){
-    var artists=(t.artists||[]).map(function(a){return a.name;}).join(', ');
-    var image=t.album&&t.album.images&&t.album.images[2]&&t.album.images[2].url||'';
-    return '<article class="row" data-spotify-uri="'+esc(t.uri)+'"><div class="row-main">'+(image?'<img class="thumb" src="'+esc(image)+'" alt="">':'<span class="thumb">♪</span>')+'<span class="rt"><b>'+esc(t.name)+'</b><small>'+esc(artists)+'</small></span><span class="dur">'+fmt(Math.round((t.duration_ms||0)/1000))+'</span></div><button class="x" type="button" data-act="spotify-play">Открыть</button></article>';
-  }).join('')||'<p class="hint">Ничего не найдено.</p>';
-}
-$('#spotify-connect').addEventListener('click',spotifyConnect);
-$('#spotify-track-form').addEventListener('submit',async function(e){
-  e.preventDefault();var q=$('#spotify-track-q').value.trim();if(!q)return;
-  $('#spotify-track-results').textContent='Ищу в Spotify…';
-  try{renderSpotifyTracks(await spotifySearchTracks(q));}
-  catch(err){$('#spotify-track-results').textContent=err.message||'Ошибка поиска Spotify.';}
+/* ---------- Поиск в официальном каталоге Spotify ---------- */
+['doroshka_spotify_token','doroshka_spotify_expiry','doroshka_spotify_verifier','doroshka_spotify_state'].forEach(function(k){
+  sessionStorage.removeItem(k);
+  localStorage.removeItem(k);
 });
-$('#spotify-track-results').addEventListener('click',function(e){
-  var b=e.target.closest('[data-act="spotify-play"]');if(!b)return;
-  var row=b.closest('[data-spotify-uri]'),uri=row&&row.dataset.spotifyUri;if(!uri)return;
-  var id=uri.split(':').pop();
-  $('#spotify-embed').innerHTML='<iframe src="https://open.spotify.com/embed/track/'+encodeURIComponent(id)+'?utm_source=generator" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player"></iframe>';
-  $('#spotify-embed').hidden=false;
+$('#spotify-track-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var q=$('#spotify-track-q').value.trim();
+  if(!q)return;
+  var url='https://open.spotify.com/search/'+encodeURIComponent(q);
+  var w=window.open(url,'_blank','noopener');
+  if(!w)toast('Разрешите открытие новой вкладки для перехода в Spotify.');
 });
-if(spotifyToken&&Date.now()<spotifyExpiry-60000)spotifySetStatus('Spotify подключён в этой вкладке браузера.');
-if(new URLSearchParams(location.search).get('spotify_connected')==='1'){
-  history.replaceState({},'',location.pathname);
-  spotifySetStatus('Spotify подключён. Можно искать треки.');
-}
 /* ---------- дополнительные источники ---------- */
 var ytKey=ls.get('youtubeApiKey','');
 var ytLastQuery='';
