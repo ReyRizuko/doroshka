@@ -854,14 +854,14 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
             int sample = 1;
-            while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 512) sample *= 2;
+            while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 256) sample *= 2;
             BitmapFactory.Options opts = new BitmapFactory.Options();
             opts.inSampleSize = sample;
             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
             if (bitmap == null) return null;
             int max = Math.max(bitmap.getWidth(), bitmap.getHeight());
-            if (max > 512) {
-                float scale = 512f / max;
+            if (max > 256) {
+                float scale = 256f / max;
                 Bitmap scaled = Bitmap.createScaledBitmap(bitmap, Math.max(1, Math.round(bitmap.getWidth() * scale)), Math.max(1, Math.round(bitmap.getHeight() * scale)), true);
                 if (scaled != bitmap) bitmap.recycle();
                 bitmap = scaled;
@@ -882,14 +882,17 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } catch (Exception ignored) {
         }
         if (it != null) {
-            session.setMetadata(new MediaMetadata.Builder()
+            Bitmap art = artwork(it);
+            MediaMetadata.Builder metadata = new MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_TITLE, it.title)
                     .putString(MediaMetadata.METADATA_KEY_ARTIST, it.artist)
                     .putString(MediaMetadata.METADATA_KEY_ALBUM, it.album)
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, dur)
-                    .putBitmap(MediaMetadata.METADATA_KEY_ART, artwork(it))
-                    .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork(it))
-                    .build());
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, dur);
+            if (art != null) {
+                metadata.putBitmap(MediaMetadata.METADATA_KEY_ART, art);
+                metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art);
+            }
+            session.setMetadata(metadata.build());
         }
         int st = isPlaying() ? PlaybackState.STATE_PLAYING
                 : (wantPlay && !prepared ? PlaybackState.STATE_BUFFERING : PlaybackState.STATE_PAUSED);
