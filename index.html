@@ -177,6 +177,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .btn.primary,.btn.arm{background:var(--accent);color:var(--accent-fg);border-color:transparent}
 .player{background:linear-gradient(155deg,rgba(255,255,255,.055),transparent 48%),var(--surface);border-color:rgba(255,255,255,.09);border-radius:24px;box-shadow:0 22px 65px rgba(0,0,0,.22);padding:22px}
 .cover{width:min(100%,290px);border-radius:18px;box-shadow:0 16px 36px rgba(0,0,0,.25)}
+#yt-main-player{display:none;overflow:hidden;border-radius:14px;background:#000}#yt-main-player.active{display:block}#yt-main-player iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
 .meta h2{font-size:20px;letter-spacing:-.025em}
 .ib.big{background:var(--accent);color:var(--accent-fg);box-shadow:0 8px 24px rgba(183,243,107,.16)}
 .side{gap:16px}
@@ -221,6 +222,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .external-search .btn{flex:none}
 @media(max-width:560px){.source-switch{grid-template-columns:repeat(2,minmax(0,1fr))}.video-results{grid-template-columns:1fr}.video-card{display:grid;grid-template-columns:112px minmax(0,1fr)}.video-card img{height:100%;aspect-ratio:auto}.video-card-body{align-content:center}.brand:after{display:none}}
 @media(prefers-reduced-motion:reduce){.btn,.source-chip,.row{transition:none}}
+@media(max-width:700px){body{scroll-padding-bottom:45vh}.source-panel form:focus-within{scroll-margin-bottom:45vh}.source-panel input:focus{scroll-margin-top:18px;scroll-margin-bottom:45vh}.source-panel{padding-bottom:30px}.source-panel input{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -239,6 +241,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
   <main class="app">
     <section class="player" aria-label="Плеер">
       <div class="cover empty" id="cover"><i data-i="note" data-sz="72"></i></div>
+      <div id="yt-main-player"></div>
       <div class="meta">
         <h2 id="np-title">Ничего не играет</h2>
         <p id="np-artist">Добавьте песни, чтобы начать</p>
@@ -471,7 +474,7 @@ function readTags(f){
   });
 }
 function mk(r){
-  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl,uri:r.uri||''};
+  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl,uri:r.uri||'',provider:r.provider||'',videoId:r.videoId||''};
   it.url=r.remoteUrl||r.uri||URL.createObjectURL(r.blob);
   it.coverUrl=(r.remoteUrl||r.uri)?(r.coverRemote||''):(r.cover?URL.createObjectURL(r.cover):'');
   it.dur=durs[r.id]||r.dur||0;
@@ -716,7 +719,7 @@ function playIds(ids,startId){
   if(!ids.length)return;
   baseList=ids.slice();errRun=0;
   buildOrder(startId||ids[0]);
-  if(Native){nativeQueue(false);curId=order[pos];updateNow();markCurrent();return;}
+  if(Native&&!(byId(order[pos])&&byId(order[pos]).provider==='youtube')){nativeQueue(false);curId=order[pos];updateNow();markCurrent();return;}
   load(order[pos]);
 }
 function nItem(id){var it=byId(id);return it?{id:it.id,url:it.url,title:it.title,artist:it.artist||'',album:it.album||''}:null;}
@@ -728,12 +731,12 @@ function nativeQueue(keep){
 function load(id){
   var it=byId(id);if(!it)return;
   curId=id;
-  audio.src=it.url;
-  var p=audio.play();if(p&&p.catch)p.catch(function(){});
+  if(it.provider==='youtube'){audio.pause();audio.removeAttribute('src');audio.load();var box=$('#yt-main-player');box.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(it.videoId)+'?autoplay=1&controls=1&rel=0&enablejsapi=1" title="YouTube player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';box.classList.add('active');setPlaying(true);}
+  else{$('#yt-main-player').classList.remove('active');$('#yt-main-player').innerHTML='';audio.src=it.url;var p=audio.play();if(p&&p.catch)p.catch(function(){});}
   updateNow();markCurrent();setMedia(it);
 }
 function next(auto){
-  if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
+  if(Native&&!(curId&&byId(curId)&&byId(curId).provider==='youtube')){if(!auto&&nativeLive)nCall(Native.next());return;}
   if(!order.length)return;
   if(auto&&repeat===2){audio.currentTime=0;audio.play();return;}
   var p=pos+1;
@@ -744,13 +747,14 @@ function next(auto){
   pos=p;load(order[pos]);
 }
 function prev(){
-  if(Native){if(nativeLive)nCall(Native.prev());return;}
+  if(Native&&!(curId&&byId(curId)&&byId(curId).provider==='youtube')){if(nativeLive)nCall(Native.prev());return;}
   if(!order.length)return;
   if(audio.currentTime>3){audio.currentTime=0;return;}
   pos=(pos-1+order.length)%order.length;load(order[pos]);
 }
 function toggle(){
   if(!curId){var v=visible();if(v.length)playIds(v.map(function(x){return x.id;}),v[0].id);return;}
+  var current=byId(curId);if(current&&current.provider==='youtube'){var fr=$('#yt-main-player iframe');if(fr){fr.contentWindow.postMessage(JSON.stringify({event:'command',func:document.body.classList.contains('playing')?'pauseVideo':'playVideo',args:[]}),'*');setPlaying(!document.body.classList.contains('playing'));}return;}
   if(Native){
     if(!nativeLive){var ids=baseList.length?baseList.slice():sorted().map(function(x){return x.id;});playIds(ids,curId);}
     else nCall(Native.toggle());
@@ -768,6 +772,7 @@ function setPlaying(on){
 function updateNow(){
   var it=curId?byId(curId):null,cv=$('#cover');
   if(!it){
+    $('#yt-main-player').classList.remove('active');$('#yt-main-player').innerHTML='';
     cv.className='cover empty';cv.removeAttribute('style');cv.innerHTML=svg('note',72);
     $('#np-title').textContent='Ничего не играет';$('#np-artist').textContent='Добавьте песни, чтобы начать';
     $('#mini').hidden=true;document.body.classList.remove('has-mini');setPlaying(false);updateTime();return;
@@ -1077,6 +1082,7 @@ var ytLastQuery='';
 var ytItems={};
 if(ytKey){$('#yt-key-in').value=ytKey;$('#yt-status').textContent='Ключ YouTube API сохранён на этом устройстве.';}
 function ytStatus(t){$('#yt-status').textContent=t;}
+function ytRecord(x){var sn=x&&x.snippet||{};return {id:'yt'+x.id.videoId,name:'youtube:'+x.id.videoId,size:0,title:sn.title||'Видео YouTube',artist:sn.channelTitle||'YouTube',album:'YouTube',blob:null,cover:null,provider:'youtube',videoId:x.id.videoId,remoteUrl:''};}
 function openSearch(url){var w=window.open(url,'_blank','noopener');if(!w)toast('Разрешите открытие всплывающих окон для перехода к источнику.');}
 async function youtubeSearch(q){
   if(!ytKey){ytLastQuery=q;ytStatus('API key не задан. Открываю официальный поиск YouTube. Для результатов внутри приложения добавьте ключ YouTube Data API v3.');openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q));return;}
@@ -1090,7 +1096,7 @@ async function youtubeSearch(q){
     if(!items.length){ytStatus('Ничего не найдено. Попробуйте другой запрос.');return;}
     $('#yt-results').innerHTML=items.map(function(x){
       var id=x.id.videoId,s=x.snippet||{},thumbUrl=(s.thumbnails&&((s.thumbnails.medium||s.thumbnails.high||s.thumbnails.default)||{}).url)||'';
-      return '<article class="video-card" data-video="'+esc(id)+'"><img src="'+esc(thumbUrl)+'" alt="" loading="lazy"><div class="video-card-body"><b>'+esc(s.title||'Видео без названия')+'</b><small>'+esc(s.channelTitle||'YouTube')+'</small><div class="video-card-actions"><button class="btn primary" type="button" data-act="yt-play">Смотреть</button><button class="btn" type="button" data-act="yt-open">YouTube</button></div></div></article>';
+      return '<article class="video-card" data-video="'+esc(id)+'"><img src="'+esc(thumbUrl)+'" alt="" loading="lazy"><div class="video-card-body"><b>'+esc(s.title||'Видео без названия')+'</b><small>'+esc(s.channelTitle||'YouTube')+'</small><div class="video-card-actions"><button class="btn primary" type="button" data-act="yt-play">Играть</button><button class="btn" type="button" data-act="yt-add">＋ Мои песни</button></div></div></article>';
     }).join('');
     ytStatus('Найдено видео: '+items.length);
   }catch(e){ytStatus('Ошибка поиска YouTube: '+(e.message||'проверьте API key и квоту'));}
@@ -1106,11 +1112,8 @@ $('#yt-results').addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');if(!b)return;
   var card=b.closest('[data-video]');if(!card)return;
   var id=card.dataset.video;
-  if(b.dataset.act==='yt-play'){
-    $('#yt-player').innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?autoplay=1&rel=0" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
-    $('#yt-player').hidden=false;
-    $('#yt-player').scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(b.dataset.act==='yt-open')openSearch('https://www.youtube.com/watch?v='+encodeURIComponent(id));
+  if(b.dataset.act==='yt-play'){var rec=ytRecord(ytItems[id]);addRemoteRec(rec).then(function(){playIds(sorted().map(function(x){return x.id;}),rec.id);});}
+  else if(b.dataset.act==='yt-add'){var rec2=ytRecord(ytItems[id]);addRemoteRec(rec2).then(function(){b.disabled=true;b.textContent='✓ Добавлено';toast('Добавлено в «Мои песни»');});}
 });
 $('#yt-open-search').onclick=function(){var q=$('#yt-q').value.trim();openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q||'music'));};
 $('#ym-form').addEventListener('submit',function(e){
