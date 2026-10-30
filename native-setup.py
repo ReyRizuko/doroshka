@@ -239,6 +239,13 @@ public class PlaybackPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setArtwork(PluginCall call) {
+        final String id = call.getString("id", "");
+        final String art = call.getString("art", "");
+        run(call, new Cmd() { public void run(PlaybackService s) { s.setArtwork(id, art); } });
+    }
+
+    @PluginMethod
     public void setRepeat(PluginCall call) {
         PlaybackService.repeat = call.getInt("mode", 0);
         call.resolve();
@@ -752,6 +759,19 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
         updateSession();
         emitState();
+    }
+
+    void setArtwork(String id, String art) {
+        for (Item item : queue) {
+            if (item.id.equals(id)) {
+                item.art = art == null ? "" : art;
+                if (item == current()) {
+                    updateSession();
+                    updateNotification();
+                }
+                return;
+            }
+        }
     }
 
     void applyVolume() {
