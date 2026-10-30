@@ -319,12 +319,24 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 
       <div id="pane-sp" role="tabpanel" hidden style="display:grid;gap:12px">
         <div class="how">
-          <h3>Перенос из Spotify</h3>
-          <p>Spotify не отдаёт сами песни: они защищены, и скачать их нельзя. Переносится список треков, а звук берётся из ваших файлов.</p>
+          <h3>Поиск в Spotify</h3>
+          <p>Подключите аккаунт Spotify, чтобы искать треки в каталоге. Воспроизведение будет открываться через официальный плеер Spotify; аудиофайлы приложение не скачивает.</p>
+          <button class="btn primary" id="spotify-connect" type="button">Подключить Spotify</button>
+          <div id="spotify-auth-status" class="status" aria-live="polite">Аккаунт не подключён.</div>
+          <form class="webform" id="spotify-track-form">
+            <input class="search" id="spotify-track-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск треков Spotify" autocomplete="off">
+            <button class="btn" type="submit">Найти</button>
+          </form>
+          <div id="spotify-track-results" class="list"></div>
+          <div id="spotify-embed" hidden></div>
+        </div>
+        <div class="how">
+          <h3>Импорт плейлистов</h3>
+          <p>Для сопоставления плейлистов с собственными файлами можно использовать экспорт CSV/JSON.</p>
           <ol class="steps">
-            <li>Откройте <a href="https://exportify.net" target="_blank" rel="noopener">exportify.net</a>, войдите в Spotify и сохраните плейлист в CSV.</li>
-            <li>Загрузите этот файл сюда. Подходит и Playlist1.json из запроса данных аккаунта Spotify.</li>
-            <li>Добавьте свои песни кнопкой «Добавить песни». Совпадения найдутся по названию и исполнителю.</li>
+            <li>Экспортируйте плейлист в CSV или подготовьте Playlist1.json из запроса данных Spotify.</li>
+            <li>Загрузите файл кнопкой ниже.</li>
+            <li>Добавьте собственные аудиофайлы для воспроизведения.</li>
           </ol>
           <button class="btn primary" id="btn-list"><i data-i="plus"></i><span>Загрузить плейлист</span></button>
         </div>
@@ -1191,6 +1203,73 @@ $('#global-form').addEventListener('submit',async function(e){
   $('#global-status').textContent=notes.join(' · ')+' Остальные каталоги показаны ниже со статусом интеграции.';
 });
 
+/* ---------- Spotify OAuth PKCE и поиск каталога ---------- */
+var SPOTIFY_CLIENT_ID='f4d35555f10f4685b85d9ee85b3f102d';
+var SPOTIFY_REDIRECT=location.origin+location.pathname.replace(/\\/$/,'')+'/spotify-callback.html';
+var spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||'';
+var spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||0);
+function spotifySetStatus(t){var el=$('#spotify-auth-status');if(el)el.textContent=t;}
+function spotifyB64(bytes){return btoa(String.fromCharCode.apply(null,Array.from(bytes))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');}
+async function spotifyConnect(){
+  try{
+    var bytes=new Uint8Array(64);crypto.getRandomValues(bytes);
+    var verifier=spotifyB64(bytes);
+    var digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));
+    var challenge=spotifyB64(new Uint8Array(digest));
+    var state=spotifyB64((function(){var a=new Uint8Array(24);crypto.getRandomValues(a);return a;})());
+    sessionStorage.setItem('doroshka_spotify_verifier',verifier);
+    sessionStorage.setItem('doroshka_spotify_state',state);
+    var u=new URL('https://accounts.spotify.com/authorize');
+    u.searchParams.set('client_id',SPOTIFY_CLIENT_ID);
+    u.searchParams.set('response_type','code');
+    u.searchParams.set('redirect_uri',SPOTIFY_REDIRECT);
+    u.searchParams.set('code_challenge_method','S256');
+    u.searchParams.set('code_challenge',challenge);
+    u.searchParams.set('state',state);
+    location.href=u.toString();
+  }catch(e){spotifySetStatus('Не удалось начать подключение. Откройте сайт в современном браузере через HTTPS.');}
+}
+function spotifyAccessToken(){
+  if(spotifyToken&&Date.now()<spotifyExpiry-60000)return Promise.resolve(spotifyToken);
+  spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||'';
+  spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||0);
+  if(spotifyToken&&Date.now()<spotifyExpiry-60000)return Promise.resolve(spotifyToken);
+  spotifySetStatus('Срок подключения истёк. Подключите Spotify снова.');
+  return Promise.reject(new Error('Spotify session expired'));
+}
+async function spotifySearchTracks(q){
+  var token=await spotifyAccessToken();
+  var u='https://api.spotify.com/v1/search?type=track&limit=20&q='+encodeURIComponent(q);
+  var r=await fetch(u,{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok){if(r.status===401){sessionStorage.removeItem('doroshka_spotify_token');spotifyToken='';}throw new Error('Spotify API: HTTP '+r.status);}
+  return (await r.json()).tracks.items||[];
+}
+function renderSpotifyTracks(items){
+  $('#spotify-track-results').innerHTML=items.map(function(t){
+    var artists=(t.artists||[]).map(function(a){return a.name;}).join(', ');
+    var image=t.album&&t.album.images&&t.album.images[2]&&t.album.images[2].url||'';
+    return '<article class="row" data-spotify-uri="'+esc(t.uri)+'"><div class="row-main">'+(image?'<img class="thumb" src="'+esc(image)+'" alt="">':'<span class="thumb">♪</span>')+'<span class="rt"><b>'+esc(t.name)+'</b><small>'+esc(artists)+'</small></span><span class="dur">'+fmt(Math.round((t.duration_ms||0)/1000))+'</span></div><button class="x" type="button" data-act="spotify-play">Открыть</button></article>';
+  }).join('')||'<p class="hint">Ничего не найдено.</p>';
+}
+$('#spotify-connect').addEventListener('click',spotifyConnect);
+$('#spotify-track-form').addEventListener('submit',async function(e){
+  e.preventDefault();var q=$('#spotify-track-q').value.trim();if(!q)return;
+  $('#spotify-track-results').textContent='Ищу в Spotify…';
+  try{renderSpotifyTracks(await spotifySearchTracks(q));}
+  catch(err){$('#spotify-track-results').textContent=err.message||'Ошибка поиска Spotify.';}
+});
+$('#spotify-track-results').addEventListener('click',function(e){
+  var b=e.target.closest('[data-act="spotify-play"]');if(!b)return;
+  var row=b.closest('[data-spotify-uri]'),uri=row&&row.dataset.spotifyUri;if(!uri)return;
+  var id=uri.split(':').pop();
+  $('#spotify-embed').innerHTML='<iframe src="https://open.spotify.com/embed/track/'+encodeURIComponent(id)+'?utm_source=generator" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player"></iframe>';
+  $('#spotify-embed').hidden=false;
+});
+if(spotifyToken&&Date.now()<spotifyExpiry-60000)spotifySetStatus('Spotify подключён в этой вкладке браузера.');
+if(new URLSearchParams(location.search).get('spotify_connected')==='1'){
+  history.replaceState({},'',location.pathname);
+  spotifySetStatus('Spotify подключён. Можно искать треки.');
+}
 /* ---------- дополнительные источники ---------- */
 var ytKey=ls.get('youtubeApiKey','');
 var ytLastQuery='';
