@@ -508,7 +508,6 @@ body{padding-top:18px;background:
             <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
             <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
-            <button class="provider-chip" type="button" data-provider="soundcloud" aria-pressed="false">SoundCloud</button>
           </div>
           <details class="global-settings">
             <summary>Настройки источников и уведомлений</summary>
@@ -530,15 +529,6 @@ body{padding-top:18px;background:
             <section class="global-result-group" data-provider-group="jamendo">
               <div class="global-result-title"><h4>Jamendo</h4><span>поиск доступен после добавления API client_id</span></div>
               <div id="global-jamendo-slot"></div>
-            </section>
-            <section class="global-result-group" data-provider-group="soundcloud">
-              <div class="global-result-title"><h4>SoundCloud</h4><span>официальный встроенный плеер</span></div>
-              <form id="sc-embed-form" class="source-form">
-                <input class="search" id="sc-embed-url" type="url" placeholder="https://soundcloud.com/artist/track" autocomplete="url" required>
-                <button class="btn primary" type="submit">Загрузить</button>
-              </form>
-              <p class="hint">Вставь публичную ссылку на трек или плейлист. Каталожный поиск и фоновое воспроизведение через нативный плеер пока не подключены.</p>
-              <div id="global-soundcloud-slot"></div>
             </section>
           </div>
         </section>
@@ -1483,22 +1473,7 @@ function syncJamendoFilter(){
 document.querySelectorAll('[data-provider]').forEach(function(b){
   b.addEventListener('click',function(){setProviderFilter(b.dataset.provider);});
 });
-function soundcloudEmbedUrl(raw){
-  var u;
-  try{u=new URL(raw);}catch(e){throw new Error('Введи полную ссылку SoundCloud.');}
-  if(u.protocol!=='https:'||!(/^(www\.)?soundcloud\.com$/i).test(u.hostname)||u.pathname.split('/').filter(Boolean).length<2){
-    throw new Error('Поддерживаются публичные ссылки soundcloud.com на трек или плейлист.');
-  }
-  return 'https://w.soundcloud.com/player/?url='+encodeURIComponent(u.origin+u.pathname)+'&color=%23b7f36b&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=true';
-}
-$('#sc-embed-form').addEventListener('submit',function(e){
-  e.preventDefault();
-  var raw=$('#sc-embed-url').value.trim(),slot=$('#global-soundcloud-slot');
-  try{
-    var src=soundcloudEmbedUrl(raw);
-    slot.innerHTML='<div class="video-player"><iframe title="SoundCloud player" src="'+esc(src)+'" allow="autoplay" loading="lazy"></iframe></div>';
-  }catch(err){slot.textContent=err.message||'Не удалось открыть ссылку SoundCloud.';}
-});
+
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
