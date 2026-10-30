@@ -339,7 +339,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Icon;
+import android.util.Base64;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
@@ -369,7 +372,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private static final int NOTIFICATION_ID = 7;
 
     private static class Item {
-        String id = "", url = "", title = "", artist = "", album = "";
+        String id = "", url = "", title = "", artist = "", album = "", art = "";
     }
 
     private final ArrayList<Item> queue = new ArrayList<>();
@@ -495,6 +498,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 it.title = j.optString("title", "");
                 it.artist = j.optString("artist", "");
                 it.album = j.optString("album", "");
+                it.art = j.optString("art", "");
                 if (!it.url.isEmpty()) list.add(it);
             }
         }
@@ -840,6 +844,32 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     }
 
     // ---------- медиасессия и уведомление ----------
+    private Bitmap artwork(Item it) {
+        if (it == null || it.art == null || !it.art.startsWith("data:image/")) return null;
+        try {
+            int comma = it.art.indexOf(',');
+            if (comma < 0) return null;
+            byte[] bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            int sample = 1;
+            while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 512) sample *= 2;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+            if (bitmap == null) return null;
+            int max = Math.max(bitmap.getWidth(), bitmap.getHeight());
+            if (max > 512) {
+                float scale = 512f / max;
+                Bitmap scaled = Bitmap.createScaledBitmap(bitmap, Math.max(1, Math.round(bitmap.getWidth() * scale)), Math.max(1, Math.round(bitmap.getHeight() * scale)), true);
+                if (scaled != bitmap) bitmap.recycle();
+                bitmap = scaled;
+            }
+            return bitmap;
+        } catch (Exception ignored) { return null; }
+    }
+
     private void updateSession() {
         if (session == null) return;
         Item it = current();
@@ -857,6 +887,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                     .putString(MediaMetadata.METADATA_KEY_ARTIST, it.artist)
                     .putString(MediaMetadata.METADATA_KEY_ALBUM, it.album)
                     .putLong(MediaMetadata.METADATA_KEY_DURATION, dur)
+                    .putBitmap(MediaMetadata.METADATA_KEY_ART, artwork(it))
+                    .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork(it))
                     .build());
         }
         int st = isPlaying() ? PlaybackState.STATE_PLAYING
@@ -903,6 +935,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 .setOngoing(true)
                 .setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
+        Bitmap art = artwork(it);
+        if (art != null) b.setLargeIcon(art);
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (open != null) {
             b.setContentIntent(PendingIntent.getActivity(this, 0, open,
@@ -939,7 +973,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        stopAll();
+        // Не останавливаем медиасервис при свайпе приложения из списка последних.
         super.onTaskRemoved(rootIntent);
     }
 
