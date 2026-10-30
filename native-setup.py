@@ -406,6 +406,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         @Override
         public void run() {
             emitState();
+            updatePlaybackState();
             if (isPlaying()) handler.postDelayed(this, 500);
         }
     };
@@ -913,6 +914,16 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art);
             }
             session.setMetadata(metadata.build());
+        }
+        updatePlaybackState();
+    }
+
+    private void updatePlaybackState() {
+        if (session == null) return;
+        int pos = 0;
+        try {
+            if (mp != null && prepared) pos = mp.getCurrentPosition();
+        } catch (Exception ignored) {
         }
         int st = isPlaying() ? PlaybackState.STATE_PLAYING
                 : (wantPlay && !prepared ? PlaybackState.STATE_BUFFERING : PlaybackState.STATE_PAUSED);
