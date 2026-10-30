@@ -2,7 +2,7 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main, master, 'feat/**']
   pull_request:
     branches: [main, master]
 jobs:
