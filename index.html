@@ -246,9 +246,19 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 #global-key-settings .source-settings,#global-key-settings .how{display:grid}
 #global-key-settings .how{padding:14px}
 #global-key-settings .source-settings{padding:12px}
-.artist-shortcuts{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:0 4px}
-.artist-shortcuts>span{font:600 9px var(--f-mono);letter-spacing:.12em;color:var(--muted);margin-right:3px}
+.artist-shortcuts-wrap{margin:0 4px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px}
+.artist-shortcuts-wrap summary{cursor:pointer;color:var(--muted);font-size:12px;font-weight:600}
+.artist-shortcuts{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:10px 0 0}
 .artist-shortcuts button{border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:7px 11px;background:rgba(255,255,255,.035);color:var(--muted);font-size:12px}
+.notification-settings{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px}
+.notification-settings>div{display:grid;gap:4px}
+.notification-settings b{font-size:13px}
+.notification-settings span{font-size:11px;color:var(--muted)}
+.global-results{gap:14px}
+.global-result-group{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.018)}
+.global-result-title{align-items:flex-start}
+.global-result-title span{max-width:55%;text-align:right;line-height:1.4}
+#global-archive-slot,#global-jamendo-slot{display:grid;gap:8px;min-width:0}
 .artist-shortcuts button:active,.artist-shortcuts button:hover{border-color:var(--accent);color:var(--fg)}
 .catalog-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .catalog-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);color:var(--fg);text-decoration:none;font-size:13px}
@@ -474,52 +484,52 @@ body{padding-top:18px;background:
 
       <div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
         <section class="global-search">
-          <div class="global-heading"><span>ЕДИНЫЙ ПОИСК</span><h3>Найти музыку</h3><p>Поиск выполняется в Audius, Jamendo и Internet Archive. YouTube доступен при подключении API-ключа.</p></div>
+          <div class="global-heading"><span>ЕДИНЫЙ ПОИСК</span><h3>Найти музыку</h3><p>Ищет в музыкальных каталогах, которые разрешают прямой поиск и потоковое воспроизведение. Доступность конкретного исполнителя зависит от каталога.</p></div>
           <form class="global-form" id="global-form">
             <input class="search" id="global-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск по всем источникам" autocomplete="off">
             <button class="btn primary" type="submit">Найти</button>
           </form>
-          <div class="artist-shortcuts" aria-label="Быстрый поиск по исполнителям">
-            <span>ИСПОЛНИТЕЛИ</span>
-            <button type="button" data-artist="медкид">медкид</button>
-            <button type="button" data-artist="тёмный принц">тёмный принц</button>
-            <button type="button" data-artist="кишлак">кишлак</button>
-            <button type="button" data-artist="ярче солнца">ярче солнца</button>
-            <button type="button" data-artist="зоха">зоха</button>
-            <button type="button" data-artist="АПФС">АПФС</button>
-            <button type="button" data-artist="конец солнечных дней">конец солнечных дней</button>
-            <button type="button" data-artist="auratoshi">auratoshi</button>
-          </div>
+          <details class="artist-shortcuts-wrap">
+            <summary>Быстрый поиск по исполнителям</summary>
+            <div class="artist-shortcuts">
+              <button type="button" data-artist="медкид">медкид</button>
+              <button type="button" data-artist="тёмный принц">тёмный принц</button>
+              <button type="button" data-artist="кишлак">кишлак</button>
+              <button type="button" data-artist="ярче солнца">ярче солнца</button>
+              <button type="button" data-artist="зоха">зоха</button>
+              <button type="button" data-artist="АПФС">АПФС</button>
+              <button type="button" data-artist="конец солнечных дней">конец солнечных дней</button>
+              <button type="button" data-artist="auratoshi">auratoshi</button>
+            </div>
+          </details>
           <div id="global-status" class="status" aria-live="polite">Введите название трека или исполнителя.</div>
           <div class="provider-filter" role="group" aria-label="Фильтр источников">
-            <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все источники</button>
-            <button class="provider-chip" type="button" data-provider="youtube" aria-pressed="false">YouTube</button>
-            <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
-            <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
+            <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все</button>
             <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
-            <button class="provider-chip" type="button" data-provider="yandex" aria-pressed="false">Яндекс Музыка</button>
-            <button class="provider-chip" type="button" data-provider="soundcloud" aria-pressed="false">SoundCloud</button>
-            <button class="provider-chip" type="button" data-provider="spotify" aria-pressed="false">Spotify</button>
-            <button class="provider-chip" type="button" data-provider="apple" aria-pressed="false">Apple Music</button>
-            <button class="provider-chip" type="button" data-provider="deezer" aria-pressed="false">Deezer</button>
-            <button class="provider-chip" type="button" data-provider="bandcamp" aria-pressed="false">Bandcamp</button>
-            <button class="provider-chip" type="button" data-provider="vk" aria-pressed="false">VK Музыка</button>
+            <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
+            <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
           </div>
           <details class="global-settings">
-            <summary>Настройки источников и API</summary>
+            <summary>Настройки источников и уведомлений</summary>
+            <div class="notification-settings">
+              <div><b>Уведомление плеера</b><span id="notification-status">Проверка разрешения…</span></div>
+              <button class="btn small" id="notification-settings-button" type="button">Настройки уведомлений</button>
+            </div>
             <div id="global-key-settings"></div>
           </details>
           <div class="global-results">
-            <section class="global-result-group" data-provider-group="youtube"><div class="global-result-title"><h4>YouTube</h4><span>поиск через YouTube Data API · воспроизведение официальным встроенным плеером</span></div><div id="global-yt-slot"></div></section>
-            <section class="global-result-group" data-provider-group="jamendo archive"><div class="global-result-title"><h4>Jamendo · Internet Archive</h4><span>свободные аудиотреки · добавление в библиотеку</span></div><div id="global-free-slot"></div></section>
-            <section class="global-result-group" data-provider-group="audius"><div class="global-result-title"><h4>Audius</h4><span>поиск и воспроизведение доступных треков в приложении</span></div><div id="global-audius-slot"></div></section>
-            <section class="global-result-group provider-note" data-provider-group="yandex"><div class="global-result-title"><h4>Яндекс Музыка</h4><span>интеграция не подключена</span></div><p>Для поиска и воспроизведения внутри Doroshka нужен разрешённый API и авторизация. Сейчас встроенный поиск каталога недоступен; внешняя страница не будет открываться автоматически.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="soundcloud"><div class="global-result-title"><h4>SoundCloud</h4><span>интеграция не подключена</span></div><p>Для поиска нужен доступ к API SoundCloud. Встроенный поиск и воспроизведение пока не подключены.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="spotify"><div class="global-result-title"><h4>Spotify</h4><span>интеграция не подключена</span></div><p>Каталог Spotify требует авторизации через Spotify API; воспроизведение полных треков ограничено самим сервисом. Встроенный поиск пока не подключён. Импорт плейлистов остаётся отдельной функцией библиотеки.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="apple"><div class="global-result-title"><h4>Apple Music</h4><span>интеграция не подключена</span></div><p>Для полного воспроизведения Apple Music требует авторизацию и подписную интеграцию. Каталожные превью Apple разрешено использовать только для продвижения соответствующего контента, а не как самостоятельный музыкальный плеер.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="deezer"><div class="global-result-title"><h4>Deezer</h4><span>интеграция не подключена</span></div><p>Публичный поиск и воспроизведение зависят от доступности API и прав приложения. Сейчас встроенная интеграция не настроена.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="bandcamp"><div class="global-result-title"><h4>Bandcamp</h4><span>интеграция не подключена</span></div><p>У Bandcamp нет общедоступного универсального API для поиска и потокового воспроизведения сторонним плеером. Поэтому результаты не подменяются ссылками на сайт.</p></section>
-            <section class="global-result-group provider-note" data-provider-group="vk"><div class="global-result-title"><h4>VK Музыка</h4><span>интеграция не подключена</span></div><p>Для встроенного поиска требуется разрешённый VK API и авторизация пользователя. Пока этот источник не подключён.</p></section>
+            <section class="global-result-group" data-provider-group="audius">
+              <div class="global-result-title"><h4>Audius</h4><span>поиск и поток внутри приложения</span></div>
+              <div id="global-audius-slot"><div class="status">Введите запрос для поиска.</div></div>
+            </section>
+            <section class="global-result-group" data-provider-group="archive">
+              <div class="global-result-title"><h4>Internet Archive</h4><span>аудиоархив · доступность зависит от записей</span></div>
+              <div id="global-archive-slot"></div>
+            </section>
+            <section class="global-result-group" data-provider-group="jamendo">
+              <div class="global-result-title"><h4>Jamendo</h4><span>поиск доступен после добавления API client_id</span></div>
+              <div id="global-jamendo-slot"></div>
+            </section>
           </div>
         </section>
         <div class="source-switch" role="group" aria-label="Источники музыки">
@@ -1245,23 +1255,59 @@ async function jamSearch(q){
   if(j.headers&&j.headers.status==='failed')throw new Error(j.headers.error_message||'Jamendo');
   return (j.results||[]).filter(function(t){return t.audio;});
 }
+var ARTIST_QUERY_ALIASES={
+  'медкид':['медкид','madk1d','medkid'],
+  'тёмный принц':['тёмный принц','темный принц','darkprinceee','dark prince'],
+  'кишлак':['кишлак','kishlak'],
+  'ярче солнца':['ярче солнца','yarche solntsa'],
+  'зоха':['зоха','zoha'],
+  'апфс':['апфс','автостопом по фазе сна'],
+  'конец солнечных дней':['конец солнечных дней','konets solnechnykh dney'],
+  'auratoshi':['auratoshi']
+};
+function searchTerms(q){
+  var n=norm(q).trim();
+  for(var key in ARTIST_QUERY_ALIASES){
+    var aliases=ARTIST_QUERY_ALIASES[key];
+    if(n===norm(key)||aliases.some(function(a){return n===norm(a);}))return aliases.slice();
+  }
+  return [q];
+}
 async function audiusSearch(q){
   async function get(path){
     var r=await fetch(AUD+path,{headers:{'Accept':'application/json'}});
     if(!r.ok)throw new Error('HTTP '+r.status);
     var j=await r.json();return j.data||[];
   }
-  var base=await get('/tracks/search?query='+encodeURIComponent(q)+'&limit=25');
-  var users=[];
-  try{users=await get('/users/search?query='+encodeURIComponent(q)+'&limit=5&sort_method=relevant');}catch(e){}
-  var artistLists=await Promise.all(users.slice(0,5).map(function(u){
-    return get('/users/'+encodeURIComponent(u.id)+'/tracks?limit=20&sort_method=plays&sort_direction=desc').catch(function(){return [];});
+  var terms=searchTerms(q).slice(0,4);
+  var trackSets=await Promise.all(terms.map(function(term){
+    return get('/tracks/search?query='+encodeURIComponent(term)+'&limit=20').catch(function(){return [];});
+  }));
+  var userSets=await Promise.all(terms.slice(0,3).map(function(term){
+    return get('/users/search?query='+encodeURIComponent(term)+'&limit=5&sort_method=relevant').catch(function(){return [];});
+  }));
+  var users=[],userSeen={};
+  userSets.forEach(function(set){set.forEach(function(u){
+    if(u&&u.id&&!userSeen[u.id]){userSeen[u.id]=1;users.push(u);}
+  });});
+  var artistSets=await Promise.all(users.slice(0,6).map(function(u){
+    return get('/users/'+encodeURIComponent(u.id)+'/tracks?limit=30&sort_method=plays&sort_direction=desc').catch(function(){return [];});
   }));
   var seen={},all=[];
-  base.concat.apply(base,artistLists).forEach(function(t){
+  trackSets.concat([artistSets]).forEach(function(set){set.forEach(function(t){
     if(t&&t.id&&t.title&&!seen[t.id]){seen[t.id]=1;all.push(t);}
-  });
-  return all.slice(0,60);
+  });});
+  var aliases=terms.map(norm);
+  function score(t){
+    var u=t.user||{},artist=norm((u.name||'')+' '+(u.handle||'')+' '+(t.artist||''));
+    var title=norm(t.title||''),n=norm(q),v=0;
+    if(aliases.some(function(a){return a&&artist.indexOf(a)>=0;}))v+=100;
+    if(aliases.some(function(a){return a&&title.indexOf(a)>=0;}))v+=30;
+    if(n&&title.indexOf(n)>=0)v+=20;
+    return v+(Number(t.play_count)||0)/1000000;
+  }
+  all.sort(function(a,b){return score(b)-score(a);});
+  return all.slice(0,80);
 }
 function audiusRec(t){
   var cover=t.artwork&&(t.artwork['480x480']||t.artwork['150x150']||t.artwork['1000x1000'])||'';
@@ -1277,6 +1323,15 @@ async function iaSearch(q){
   var url=IA+'/advancedsearch.php?q='+encodeURIComponent('('+q+') AND mediatype:audio')+'&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=15&sort%5B%5D=downloads+desc&output=json';
   var r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
   return ((await r.json()).response||{}).docs||[];
+}
+async function iaSearchMany(q){
+  var terms=searchTerms(q).slice(0,4);
+  var sets=await Promise.all(terms.map(function(term){return iaSearch(term).catch(function(){return [];});}));
+  var seen={},all=[];
+  sets.forEach(function(set){set.forEach(function(d){
+    if(d&&d.identifier&&!seen[d.identifier]){seen[d.identifier]=1;all.push(d);}
+  });});
+  return all.slice(0,40);
 }
 function jamRec(t){
   return {id:'jm'+t.id,name:'jamendo:'+t.id,size:0,title:t.name||'Без названия',artist:t.artist_name||'',album:t.album_name||'',blob:null,cover:null,
@@ -1307,16 +1362,17 @@ function renderIA(docs){
   }).join('');
 }
 async function webSearch(q){
-  webStatus('Ищу…');$('#web-res').innerHTML='';$('#web-au').innerHTML='';
-  var tasks=[jamKey?jamSearch(q):Promise.resolve(null),iaSearch(q)];
-  var res=await Promise.allSettled(tasks);
-  var a=res[0],b=res[1],na=0,nb=0,msg='';
-  if(a.status==='fulfilled'&&a.value&&a.value.length){na=a.value.length;renderJam(a.value);}
-  if(a.status==='rejected')msg=' Jamendo не ответил: проверьте ключ.';
+  webStatus('Ищу в Internet Archive…');
+  $('#web-res').innerHTML='';
+  $('#web-au').innerHTML=jamKey?'Поиск Jamendo…':'<div class="status">Jamendo не запущен: для него нужен client_id. Остальные источники работают без ключа.</div>';
+  var terms=searchTerms(q);
+  var tasks=[jamKey?Promise.all(terms.slice(0,3).map(function(term){return jamSearch(term).catch(function(){return [];})).then(function(sets){var seen={},all=[];sets.forEach(function(set){set.forEach(function(t){if(t&&t.id&&!seen[t.id]){seen[t.id]=1;all.push(t);}});});return all;}):Promise.resolve([]),iaSearchMany(q)];
+  var res=await Promise.allSettled(tasks),a=res[0],b=res[1],na=0,nb=0;
+  if(a.status==='fulfilled'&&a.value.length){na=a.value.length;renderJam(a.value);}
+  else if(jamKey&&a.status==='rejected')$('#web-au').textContent='Jamendo временно недоступен.';
   if(b.status==='fulfilled'&&b.value.length){nb=b.value.length;renderIA(b.value);}
-  if(na||nb)webStatus(msg.trim());
-  else if(a.status==='rejected'&&b.status==='rejected')webStatus('Не удалось выполнить поиск. Проверьте интернет и повторите.');
-  else webStatus(('Ничего не найдено. Попробуйте другое слово.'+msg+(jamKey?'':' Добавьте ключ Jamendo, чтобы искать и там.')).trim());
+  webStatus(nb?'Найдено записей: '+nb:(b.status==='rejected'?'Internet Archive временно недоступен.':'В Internet Archive ничего не найдено.'));
+  return {jamendo:na,archive:nb};
 }
 async function webFiles(card){
   var id=card.dataset.id,box=card.querySelector('.wfiles'),btn=card.querySelector('[data-act=files]');
@@ -1369,18 +1425,29 @@ $('#web-res').addEventListener('click',async function(e){
 });
 showKey();
 /* Переносим существующие блоки поиска в единый экран, не дублируя обработчики и ключи. */
-$('#global-key-settings').appendChild($('#yt-settings'));
 $('#global-key-settings').appendChild($('#jam-key'));
 $('#global-key-settings').appendChild($('#key-reset'));
 $('#global-yt-slot').appendChild($('#yt-status'));
 $('#global-yt-slot').appendChild($('#yt-player'));
 $('#global-yt-slot').appendChild($('#yt-results'));
-$('#global-free-slot').appendChild($('#web-status'));
-$('#global-free-slot').appendChild($('#web-au'));
-$('#global-free-slot').appendChild($('#web-res'));
+$('#global-archive-slot').appendChild($('#web-status'));
+$('#global-archive-slot').appendChild($('#web-res'));
+$('#global-jamendo-slot').appendChild($('#web-au'));
 $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Введите запрос для поиска в Audius.</div><div id="audius-results"></div>';
 $('#yt-open-search').hidden=true;
 var activeProvider='all';
+if(Native){
+  var ns=$('#notification-status'),nb=$('#notification-settings-button');
+  Native.getNotificationStatus().then(function(v){
+    ns.textContent=v&&v.granted?'Разрешено':'Разрешение отключено — открой настройки Android';
+  }).catch(function(){ns.textContent='Не удалось проверить разрешение';});
+  nb.addEventListener('click',function(){
+    Native.openNotificationSettings().catch(function(){toast('Не удалось открыть настройки уведомлений');});
+  });
+}else{
+  $('#notification-status').textContent='Доступно в Android-приложении';
+  $('#notification-settings-button').hidden=true;
+}
 function setProviderFilter(name){
   activeProvider=name;
   document.querySelectorAll('[data-provider]').forEach(function(b){
@@ -1398,15 +1465,15 @@ document.querySelectorAll('[data-provider]').forEach(function(b){
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
-  $('#global-status').textContent='Ищу в подключённых источниках…';
-  $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Ищу в Audius…</div><div id="audius-results"></div>';
-  var results=await Promise.allSettled([youtubeSearch(q),webSearch(q),audiusSearch(q)]);
-  var ar=results[2],yt=$('#yt-status').textContent,free=$('#web-status').textContent,notes=[];
-  if(ar.status==='fulfilled'&&ar.value.length){$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Найдено в Audius: '+ar.value.length+'</div><div id="audius-results"></div>';renderAudius(ar.value);}
-  else $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">'+(ar.status==='rejected'?'Audius временно недоступен.':'В Audius ничего не найдено по этому запросу.')+'</div><div id="audius-results"></div>';
-  if(yt)notes.push('YouTube: '+yt);
-  if(free)notes.push(free);
-  notes.push(ar.status==='fulfilled'?'Audius: '+ar.value.length+' треков':'Audius: ошибка запроса');
+  $('#global-status').textContent='Ищу в Audius и Internet Archive…';
+  $('#web-au').innerHTML='';$('#web-res').innerHTML='';
+  $('#global-audius-slot').innerHTML='<div class="status">Ищу треки и профили исполнителей…</div>';
+  var results=await Promise.allSettled([webSearch(q),audiusSearch(q)]);
+  var wr=results[0],ar=results[1],notes=[];
+  if(ar.status==='fulfilled'&&ar.value.length){renderAudius(ar.value);notes.push('Audius: '+ar.value.length+' результатов');}
+  else{$('#global-audius-slot').innerHTML='<div class="status">'+(ar.status==='rejected'?'Audius временно недоступен.':'В Audius ничего не найдено. Это не означает, что трека нет в других сервисах.')+'</div>';notes.push('Audius: '+(ar.status==='rejected'?'ошибка':'0 результатов'));}
+  if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive+' · Jamendo: '+wr.value.jamendo);
+  else notes.push('Архивные источники временно недоступны.');
   $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
