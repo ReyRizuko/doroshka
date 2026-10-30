@@ -1486,7 +1486,7 @@ document.querySelectorAll('[data-provider]').forEach(function(b){
 function soundcloudEmbedUrl(raw){
   var u;
   try{u=new URL(raw);}catch(e){throw new Error('Введи полную ссылку SoundCloud.');}
-  if(u.protocol!=='https:'||!(/^(www\\.)?soundcloud\\.com$/i).test(u.hostname)||u.pathname.split('/').filter(Boolean).length<2){
+  if(u.protocol!=='https:'||!(/^(www\.)?soundcloud\.com$/i).test(u.hostname)||u.pathname.split('/').filter(Boolean).length<2){
     throw new Error('Поддерживаются публичные ссылки soundcloud.com на трек или плейлист.');
   }
   return 'https://w.soundcloud.com/player/?url='+encodeURIComponent(u.origin+u.pathname)+'&color=%23b7f36b&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=true';
