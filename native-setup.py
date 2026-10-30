@@ -400,6 +400,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import com.getcapacitor.JSObject;
 import java.util.ArrayList;
 import org.json.JSONArray;
@@ -1029,8 +1030,6 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         b.addAction(action(android.R.drawable.ic_menu_close_clear_cancel, "Закрыть", "STOP", 4));
         b.setStyle(new Notification.MediaStyle()
                 .setMediaSession(session.getSessionToken())
-                .setShowCancelButton(true)
-                .setCancelButtonIntent(control("STOP", 4))
                 .setShowActionsInCompactView(0, 1, 2))
                 .setDeleteIntent(control("STOP", 4));
         return b.build();
