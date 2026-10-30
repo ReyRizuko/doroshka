@@ -1205,7 +1205,8 @@ $('#global-form').addEventListener('submit',async function(e){
 
 /* ---------- Spotify OAuth PKCE и поиск каталога ---------- */
 var SPOTIFY_CLIENT_ID='f4d35555f10f4685b85d9ee85b3f102d';
-var SPOTIFY_REDIRECT=location.origin+location.pathname.replace(/\/$/,'')+'/spotify-callback.html';
+var SPOTIFY_NATIVE=!!(window.SpotifyOAuth&&typeof window.SpotifyOAuth.getPendingUrl==='function');
+var SPOTIFY_REDIRECT=SPOTIFY_NATIVE?'doroshka://spotify-callback':location.origin+location.pathname.replace(/\/$/,'')+'/spotify-callback.html';
 var spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||'';
 var spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||0);
 function spotifySetStatus(t){var el=$('#spotify-auth-status');if(el)el.textContent=t;}
@@ -1226,7 +1227,7 @@ async function spotifyConnect(){
     u.searchParams.set('code_challenge_method','S256');
     u.searchParams.set('code_challenge',challenge);
     u.searchParams.set('state',state);
-    location.href=u.toString();
+    if(SPOTIFY_NATIVE)window.SpotifyOAuth.openAuthUrl(u.toString());else location.href=u.toString();
   }catch(e){spotifySetStatus('Не удалось начать подключение. Откройте сайт в современном браузере через HTTPS.');}
 }
 function spotifyAccessToken(){
@@ -1236,6 +1237,37 @@ function spotifyAccessToken(){
   if(spotifyToken&&Date.now()<spotifyExpiry-60000)return Promise.resolve(spotifyToken);
   spotifySetStatus('Срок подключения истёк. Подключите Spotify снова.');
   return Promise.reject(new Error('Spotify session expired'));
+}
+async function spotifyHandleNativeCallback(raw){
+  try{
+    var callback=new URL(raw);
+    if(callback.protocol!=='doroshka:'||callback.hostname!=='spotify-callback')throw new Error('Некорректный адрес возврата');
+    var params=callback.searchParams;
+    var error=params.get('error');
+    if(error)throw new Error('Spotify отменил подключение: '+error);
+    var code=params.get('code'),state=params.get('state');
+    var expected=sessionStorage.getItem('doroshka_spotify_state');
+    var verifier=sessionStorage.getItem('doroshka_spotify_verifier');
+    if(!code||!state||!expected||state!==expected||!verifier)throw new Error('Не удалось проверить OAuth-ответ. Начните подключение заново.');
+    spotifySetStatus('Получаю токен Spotify…');
+    var body=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,grant_type:'authorization_code',code:code,redirect_uri:SPOTIFY_REDIRECT,code_verifier:verifier});
+    var response=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    var data=await response.json();
+    if(!response.ok||!data.access_token)throw new Error(data.error_description||data.error||('HTTP '+response.status));
+    spotifyToken=data.access_token;spotifyExpiry=Date.now()+(data.expires_in||3600)*1000;
+    sessionStorage.setItem('doroshka_spotify_token',spotifyToken);
+    sessionStorage.setItem('doroshka_spotify_expiry',String(spotifyExpiry));
+    sessionStorage.removeItem('doroshka_spotify_verifier');sessionStorage.removeItem('doroshka_spotify_state');
+    spotifySetStatus('Spotify подключён. Можно искать треки.');
+  }catch(e){spotifySetStatus(e.message||'Ошибка авторизации Spotify.');}
+}
+if(SPOTIFY_NATIVE){
+  setInterval(function(){
+    try{
+      var pending=window.SpotifyOAuth.getPendingUrl();
+      if(pending){window.SpotifyOAuth.clearPendingUrl();spotifyHandleNativeCallback(pending);}
+    }catch(e){spotifySetStatus('Не удалось обработать возврат из Spotify.');}
+  },700);
 }
 async function spotifySearchTracks(q){
   var token=await spotifyAccessToken();
