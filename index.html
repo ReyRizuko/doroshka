@@ -216,7 +216,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .video-card-actions .btn{min-height:32px;padding:0 9px;font-size:12px}
 .video-player{overflow:hidden;border:1px solid rgba(183,243,107,.22);border-radius:16px;background:#050608}
 .video-player iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
-.external-search{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:var(--surface)}
+.external-search{display:none;align-items:center;justify-content:space-between;gap:14px;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:var(--surface)}
 .external-search h3{margin:0 0 4px;font-size:15px}
 .external-search p{margin:0;color:var(--muted);font-size:13px}
 .external-search .btn{flex:none}
@@ -475,7 +475,7 @@ function readTags(f){
 }
 function mk(r){
   var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl,uri:r.uri||'',provider:r.provider||'',videoId:r.videoId||''};
-  it.url=r.remoteUrl||r.uri||URL.createObjectURL(r.blob);
+  it.url=r.remoteUrl||r.uri||(r.blob?URL.createObjectURL(r.blob):'');
   it.coverUrl=(r.remoteUrl||r.uri)?(r.coverRemote||''):(r.cover?URL.createObjectURL(r.cover):'');
   it.dur=durs[r.id]||r.dur||0;
   it.nTitle=normTitle(it.title);
@@ -1083,9 +1083,9 @@ var ytItems={};
 if(ytKey){$('#yt-key-in').value=ytKey;$('#yt-status').textContent='Ключ YouTube API сохранён на этом устройстве.';}
 function ytStatus(t){$('#yt-status').textContent=t;}
 function ytRecord(x){var sn=x&&x.snippet||{};return {id:'yt'+x.id.videoId,name:'youtube:'+x.id.videoId,size:0,title:sn.title||'Видео YouTube',artist:sn.channelTitle||'YouTube',album:'YouTube',blob:null,cover:null,provider:'youtube',videoId:x.id.videoId,remoteUrl:''};}
-function openSearch(url){var w=window.open(url,'_blank','noopener');if(!w)toast('Разрешите открытие всплывающих окон для перехода к источнику.');}
+function openSearch(url){toast('Переходы на внешние сайты отключены. Встроенный поиск этого сервиса пока не подключён.');}
 async function youtubeSearch(q){
-  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан. Открываю официальный поиск YouTube. Для результатов внутри приложения добавьте ключ YouTube Data API v3.');openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q));return;}
+  if(!ytKey){ytLastQuery=q;ytStatus('Для встроенного поиска YouTube нужен ключ YouTube Data API v3. Добавьте его в настройках ниже — результаты появятся здесь.');$('#yt-settings').open=true;return;}
   ytStatus('Ищу на YouTube…');$('#yt-results').innerHTML='';$('#yt-player').hidden=true;$('#yt-player').innerHTML='';
   try{
     var u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&safeSearch=moderate&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(ytKey);
@@ -1115,7 +1115,7 @@ $('#yt-results').addEventListener('click',function(e){
   if(b.dataset.act==='yt-play'){var rec=ytRecord(ytItems[id]);addRemoteRec(rec).then(function(){playIds(sorted().map(function(x){return x.id;}),rec.id);});}
   else if(b.dataset.act==='yt-add'){var rec2=ytRecord(ytItems[id]);addRemoteRec(rec2).then(function(){b.disabled=true;b.textContent='✓ Добавлено';toast('Добавлено в «Мои песни»');});}
 });
-$('#yt-open-search').onclick=function(){var q=$('#yt-q').value.trim();openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q||'music'));};
+$('#yt-open-search').hidden=true;
 $('#ym-form').addEventListener('submit',function(e){
   e.preventDefault();var q=$('#ym-q').value.trim();if(!q)return;
   var url='https://music.yandex.ru/search?text='+encodeURIComponent(q);
