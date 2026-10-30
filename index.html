@@ -267,6 +267,117 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 }
 @media(prefers-reduced-motion:reduce){.global-form .btn{transition:none}}
 
+
+/* ---------- Обновлённый интерфейс: music-first ---------- */
+:root{
+  --bg:#090b10;--surface:#121722;--surface-2:#1b2431;--line:#2a3545;
+  --fg:#f4f6fb;--muted:#98a5b8;--accent:#c4f36b;--accent-fg:#11190a;
+}
+body{padding-top:18px;background:
+  radial-gradient(ellipse at 8% 0%,rgba(196,243,107,.11),transparent 31%),
+  radial-gradient(ellipse at 88% 15%,rgba(139,112,255,.12),transparent 34%),var(--bg)}
+.wrap{max-width:1240px}
+.top{margin-bottom:24px;padding:8px 4px 16px;border-bottom:1px solid rgba(255,255,255,.075)}
+.brand{font-size:22px;letter-spacing:-.055em}
+.brand svg{filter:drop-shadow(0 0 12px rgba(196,243,107,.35))}
+.top-actions .btn{border-radius:999px;min-height:42px;padding-inline:17px}
+.app{gap:24px}
+.player{border-radius:26px;padding:22px;background:linear-gradient(155deg,rgba(196,243,107,.075),transparent 44%),linear-gradient(25deg,rgba(143,119,255,.08),transparent 55%),#121722;border:1px solid rgba(255,255,255,.09);box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.cover{width:min(100%,300px);border-radius:20px;background-color:#222b3a;box-shadow:0 20px 48px rgba(0,0,0,.35)}
+.meta h2{font-size:21px;letter-spacing:-.035em}
+.meta p{font-size:13px}
+.ib{transition:background .16s,transform .16s}
+.ib:active{transform:scale(.94)}
+.ib.big{width:64px;height:64px;background:var(--accent);color:var(--accent-fg);box-shadow:0 8px 28px rgba(196,243,107,.2)}
+.controls{gap:9px}
+.vol{padding-top:4px}
+.side{gap:16px;min-width:0}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:rgba(255,255,255,.035)}
+.tab{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:11px;font-size:13px;font-weight:600}
+.tab-icon{font-size:17px;line-height:1;color:var(--muted)}
+.tab[aria-selected=true]{background:#252e3d;color:var(--fg);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.tab[aria-selected=true] .tab-icon{color:var(--accent)}
+.tab small{margin-left:0;font-size:10px;color:var(--muted)}
+.library-hero{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:space-between;min-height:224px;padding:30px 32px;border:1px solid rgba(255,255,255,.09);border-radius:23px;background:linear-gradient(112deg,#253529 0%,#283b2c 38%,#3b3451 100%);box-shadow:0 18px 50px rgba(0,0,0,.2)}
+.library-hero:before{content:"";position:absolute;z-index:-1;width:330px;height:330px;right:8%;top:-205px;border:1px solid rgba(255,255,255,.16);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.025),0 0 0 58px rgba(255,255,255,.025),0 0 0 88px rgba(255,255,255,.02)}
+.library-hero-copy{max-width:470px;position:relative;z-index:2}
+.eyebrow{display:block;color:var(--accent);font:600 10px var(--f-mono);letter-spacing:.17em}
+.library-hero h2{margin:12px 0 8px;font:600 clamp(30px,5vw,48px)/1.04 var(--f-display);letter-spacing:-.06em}
+.library-hero p{max-width:40ch;margin:0 0 20px;color:rgba(255,255,255,.72);font-size:14px}
+.hero-cta{border:0!important;border-radius:999px!important;background:var(--accent)!important;color:var(--accent-fg)!important;min-height:42px;padding-inline:18px!important;font-weight:700}
+.hero-art{position:absolute;right:8%;top:50%;width:190px;height:190px;transform:translateY(-50%) rotate(-12deg);border-radius:34px;background:linear-gradient(145deg,#d6ff8a,#9acb53 48%,#667eaf);box-shadow:0 24px 60px rgba(0,0,0,.28);display:grid;place-items:center}
+.hero-art:before,.hero-art:after{content:"";position:absolute;inset:13px;border:1px solid rgba(17,25,10,.22);border-radius:25px}
+.hero-art:after{inset:26px;border-color:rgba(17,25,10,.16)}
+.hero-art span{position:absolute;width:108px;height:108px;border:1px solid rgba(17,25,10,.35);border-radius:50%;box-shadow:0 0 0 12px rgba(17,25,10,.06),0 0 0 24px rgba(17,25,10,.045)}
+.hero-art i{position:absolute;width:24px;height:24px;border-radius:50%;background:#202b1a}
+.hero-art b{position:absolute;right:18px;bottom:12px;color:rgba(17,25,10,.72);font:700 28px var(--f-display)}
+.library-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:8px 3px 0}
+.library-toolbar h3{margin:5px 0 0;font:600 23px var(--f-display);letter-spacing:-.045em}
+.library-count{font:500 10px var(--f-mono);letter-spacing:.12em;color:var(--muted)}
+#q.search{display:block!important;min-height:48px;border-radius:14px;background:#111722;border-color:rgba(255,255,255,.1);padding-inline:16px}
+.list{gap:4px}
+.row{border-radius:13px;padding:3px 5px}
+.row-main{padding:8px 9px;gap:13px}
+.thumb{width:48px;height:48px;border-radius:11px;background-color:#252e3c}
+.rt b{font-weight:600}
+.rt small{font-size:12px}
+.x{border-radius:50%}
+.how,.pl{border-radius:19px;padding:18px;background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 65%),var(--surface);border-color:rgba(255,255,255,.08)}
+.search{border-radius:13px}
+.global-heading{padding:20px 8px 6px}
+.global-heading h3{font-size:clamp(26px,4vw,36px)}
+.provider-chip{border-radius:999px}
+.video-card{border-radius:17px}
+.mini{border-top:1px solid rgba(255,255,255,.12);background:rgba(18,23,34,.96);backdrop-filter:blur(22px)}
+.toast{border-radius:999px}
+
+/* Mobile: compact bottom navigation and mini-player stack */
+@media(max-width:899px){
+  body{padding-top:12px;padding-bottom:150px}
+  body.has-mini{padding-bottom:210px}
+  .top{margin-bottom:15px;padding-bottom:13px}
+  .brand{font-size:19px}
+  .top-actions .btn{min-height:38px;padding-inline:13px}
+  .app{display:flex;flex-direction:column;gap:16px}
+  .player{position:relative;top:auto;grid-template-columns:92px minmax(0,1fr);align-items:center;gap:10px 14px;padding:14px;border-radius:20px}
+  .cover{grid-row:span 2;width:92px;border-radius:14px}
+  .cover i svg{width:42px;height:42px}
+  .meta{text-align:left;align-self:end}
+  .meta h2{font-size:16px}
+  .meta p{font-size:12px}
+  .seek{grid-column:1/-1;gap:8px}
+  .controls{grid-column:1/-1;justify-content:space-around}
+  .controls .ib{width:40px;height:40px}
+  .controls .ib.big{width:54px;height:54px}
+  .vol{display:none}
+  .side{gap:13px}
+  .tabs{position:fixed;z-index:24;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:7px 8px;min-height:62px;border-radius:19px;background:rgba(20,25,36,.96);backdrop-filter:blur(24px);box-shadow:0 12px 40px rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.12)}
+  .tab{min-height:46px;flex-direction:column;gap:1px;font-size:10px}
+  .tab-icon{font-size:17px}
+  .tab small{display:none}
+  .mini{bottom:calc(78px + env(safe-area-inset-bottom,0px));padding-top:7px;padding-bottom:7px}
+  body.has-mini .toast{bottom:calc(148px + env(safe-area-inset-bottom,0px))}
+  .library-hero{min-height:190px;padding:23px 21px;border-radius:20px}
+  .library-hero h2{font-size:34px}
+  .library-hero p{max-width:31ch;font-size:12px}
+  .hero-art{right:-30px;width:145px;height:145px;opacity:.68}
+  .library-hero-copy{max-width:75%;z-index:2}
+  .library-toolbar h3{font-size:21px}
+  #q.search{min-height:46px}
+}
+@media(max-width:420px){
+  .library-hero{min-height:184px}
+  .library-hero-copy{max-width:82%}
+  .hero-art{right:-62px;opacity:.45}
+  .library-hero h2{font-size:30px}
+  .hero-cta{min-height:38px;font-size:12px}
+  .player{grid-template-columns:78px minmax(0,1fr)}
+  .cover{width:78px}
+}
+@media(min-width:900px){
+  .tabs{position:sticky;top:12px;z-index:5}
+}
+
 </style>
 </head>
 <body>
@@ -306,14 +417,27 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 
     <section class="side">
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" id="tab-lib" aria-selected="true">Файлы<small id="n-lib">0</small></button>
-        <button class="tab" role="tab" id="tab-sp" aria-selected="false">Spotify<small id="n-sp">0</small></button>
-        <button class="tab" role="tab" id="tab-web" aria-selected="false">Интернет</button>
+        <button class="tab" role="tab" id="tab-lib" aria-selected="true"><span class="tab-icon">♫</span><span>Медиатека</span><small id="n-lib">0</small></button>
+        <button class="tab" role="tab" id="tab-sp" aria-selected="false"><span class="tab-icon">◉</span><span>Spotify</span><small id="n-sp">0</small></button>
+        <button class="tab" role="tab" id="tab-web" aria-selected="false"><span class="tab-icon">⌕</span><span>Обзор</span></button>
       </div>
       <div class="status" id="status" aria-live="polite"></div>
 
       <div id="pane-lib" role="tabpanel" style="display:grid;gap:10px">
-        <input class="search" id="q" type="search" placeholder="Поиск по названию и исполнителю" aria-label="Поиск" hidden>
+        <section class="library-hero">
+          <div class="library-hero-copy">
+            <span class="eyebrow">ТВОЯ МУЗЫКА · ТВОИ ПРАВИЛА</span>
+            <h2>Слушай своё.</h2>
+            <p>Локальные треки, любимые подборки и музыка из сети — в одном месте.</p>
+            <button class="btn hero-cta" id="library-add-cta" type="button"><i data-i="plus"></i><span>Добавить музыку</span></button>
+          </div>
+          <div class="hero-art" aria-hidden="true"><span></span><i></i><b>♫</b></div>
+        </section>
+        <div class="library-toolbar">
+          <div><span class="eyebrow">КОЛЛЕКЦИЯ</span><h3>Медиатека</h3></div>
+          <span class="library-count">МОИ ТРЕКИ</span>
+        </div>
+        <input class="search" id="q" type="search" placeholder="Найти трек или исполнителя" aria-label="Поиск по медиатеке">
         <div class="list" id="lib-list"></div>
       </div>
 
@@ -942,6 +1066,7 @@ function setSource(name){
 document.querySelectorAll('[data-source]').forEach(function(b){b.addEventListener('click',function(){setSource(b.dataset.source);});});
 $('#q').addEventListener('input',function(e){filter=e.target.value;renderLib();markCurrent();});
 $('#btn-add').onclick=startAdd;
+$('#library-add-cta').addEventListener('click',function(){startAdd();});
 $('#btn-folder').onclick=function(){$('#f-folder').click();};
 $('#btn-list').onclick=function(){$('#f-list').click();};
 function pick(sel,fn){$(sel).addEventListener('change',function(e){var fl=Array.prototype.slice.call(e.target.files);e.target.value='';if(fl.length)fn(fl);});}
