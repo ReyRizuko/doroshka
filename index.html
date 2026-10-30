@@ -1205,11 +1205,11 @@ $('#global-form').addEventListener('submit',async function(e){
 
 /* ---------- Spotify OAuth PKCE и поиск каталога ---------- */
 var SPOTIFY_CLIENT_ID='f4d35555f10f4685b85d9ee85b3f102d';
-var SPOTIFY_REDIRECT=location.origin+location.pathname.replace(/\\/$/,'')+'/spotify-callback.html';
+var SPOTIFY_REDIRECT=location.origin+location.pathname.replace(/\/$/,'')+'/spotify-callback.html';
 var spotifyToken=sessionStorage.getItem('doroshka_spotify_token')||'';
 var spotifyExpiry=Number(sessionStorage.getItem('doroshka_spotify_expiry')||0);
 function spotifySetStatus(t){var el=$('#spotify-auth-status');if(el)el.textContent=t;}
-function spotifyB64(bytes){return btoa(String.fromCharCode.apply(null,Array.from(bytes))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');}
+function spotifyB64(bytes){return btoa(String.fromCharCode.apply(null,Array.from(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 async function spotifyConnect(){
   try{
     var bytes=new Uint8Array(64);crypto.getRandomValues(bytes);
