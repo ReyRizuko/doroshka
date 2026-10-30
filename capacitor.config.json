@@ -1,0 +1,8 @@
+{
+  "appId": "app.dorozhka.player",
+  "appName": "Дорожка",
+  "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
+}

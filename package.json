@@ -1,0 +1,20 @@
+{
+  "name": "dorozhka",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare-assets": "node scripts/prepare.js",
+    "android": "npm run prepare-assets && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@fontsource/jetbrains-mono": "^5.0.0",
+    "@fontsource/onest": "^5.0.0",
+    "@fontsource/unbounded": "^5.0.0",
+    "jsmediatags": "^3.9.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}
