@@ -41,7 +41,6 @@ FILES['MainActivity.java'] = r'''package app.dorozhka.player;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -66,6 +65,7 @@ public class MainActivity extends BridgeActivity {
         if ("doroshka".equals(uri.getScheme()) && "spotify-callback".equals(uri.getHost())) {
             getSharedPreferences("doroshka_oauth", MODE_PRIVATE).edit()
                 .putString("spotify_callback_url", uri.toString()).apply();
+        }
     }
 }
 '''
@@ -997,7 +997,7 @@ else:
 
 # ---- Spotify OAuth deep link ----
 if 'android:host="spotify-callback"' not in m:
-    activity_re = r'<activity\\b(?=[^>]*android:name="(?:\\.MainActivity|' + re.escape(PKG + '.MainActivity') + r')")[^>]*>'
+    activity_re = r'<activity\b(?=[^>]*android:name="(?:\.MainActivity|' + re.escape(PKG + '.MainActivity') + r')")[^>]*>'
     match = re.search(activity_re, m)
     if not match:
         sys.exit("Не найдена MainActivity для Spotify OAuth deep link")
@@ -1005,11 +1005,11 @@ if 'android:host="spotify-callback"' not in m:
     if 'android:launchMode=' not in tag:
         tag = tag[:-1] + ' android:launchMode="singleTask">'
     intent_filter = (
-        '\\n            <intent-filter>\\n'
-        '                <action android:name="android.intent.action.VIEW" />\\n'
-        '                <category android:name="android.intent.category.DEFAULT" />\\n'
-        '                <category android:name="android.intent.category.BROWSABLE" />\\n'
-        '                <data android:scheme="doroshka" android:host="spotify-callback" />\\n'
+        '\n            <intent-filter>\n'
+        '                <action android:name="android.intent.action.VIEW" />\n'
+        '                <category android:name="android.intent.category.DEFAULT" />\n'
+        '                <category android:name="android.intent.category.BROWSABLE" />\n'
+        '                <data android:scheme="doroshka" android:host="spotify-callback" />\n'
         '            </intent-filter>'
     )
     m = m[:match.start()] + tag + intent_filter + m[match.end():]
