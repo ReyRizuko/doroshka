@@ -358,8 +358,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
           </details>
           <div class="global-results">
             <section class="global-result-group" data-provider-group="youtube"><div class="global-result-title"><h4>YouTube</h4><span>поиск через YouTube Data API · воспроизведение официальным встроенным плеером</span></div><div id="global-yt-slot"></div></section>
-            <section class="global-result-group" data-provider-group="jamendo"><div class="global-result-title"><h4>Jamendo</h4><span>свободные аудиотреки · добавление в библиотеку</span></div><div id="global-free-slot"></div></section>
-            <section class="global-result-group provider-note" data-provider-group="archive"><div class="global-result-title"><h4>Internet Archive</h4><span>свободные аудиофайлы</span></div><p>Результаты Internet Archive отображаются в общей группе свободной музыки выше. Список файлов можно открыть и добавить треки в библиотеку.</p></section>
+            <section class="global-result-group" data-provider-group="jamendo archive"><div class="global-result-title"><h4>Jamendo · Internet Archive</h4><span>свободные аудиотреки · добавление в библиотеку</span></div><div id="global-free-slot"></div></section>
             <section class="global-result-group provider-note" data-provider-group="yandex"><div class="global-result-title"><h4>Яндекс Музыка</h4><span>интеграция не подключена</span></div><p>Для поиска и воспроизведения внутри Doroshka нужен разрешённый API и авторизация. Сейчас встроенный поиск каталога недоступен; внешняя страница не будет открываться автоматически.</p></section>
             <section class="global-result-group provider-note" data-provider-group="soundcloud"><div class="global-result-title"><h4>SoundCloud</h4><span>интеграция не подключена</span></div><p>Для поиска нужен доступ к API SoundCloud. Встроенный поиск и воспроизведение пока не подключены.</p></section>
             <section class="global-result-group provider-note" data-provider-group="spotify"><div class="global-result-title"><h4>Spotify</h4><span>интеграция не подключена</span></div><p>Каталог Spotify требует авторизации через Spotify API; воспроизведение полных треков ограничено самим сервисом. Встроенный поиск пока не подключён. Импорт плейлистов остаётся отдельной функцией библиотеки.</p></section>
@@ -1173,7 +1172,7 @@ function setProviderFilter(name){
     b.setAttribute('aria-pressed',on?'true':'false');
   });
   document.querySelectorAll('[data-provider-group]').forEach(function(g){
-    g.hidden=name!=='all'&&g.dataset.providerGroup!==name;
+    g.hidden=name!=='all'&&g.dataset.providerGroup.split(' ').indexOf(name)===-1;
   });
 }
 document.querySelectorAll('[data-provider]').forEach(function(b){
