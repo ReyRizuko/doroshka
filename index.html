@@ -1274,10 +1274,15 @@ if(SPOTIFY_NATIVE){
 }
 async function spotifySearchTracks(q){
   var token=await spotifyAccessToken();
-  var u='https://api.spotify.com/v1/search?type=track&limit=20&q='+encodeURIComponent(q);
+  var u='https://api.spotify.com/v1/search?type=track&limit=10&q='+encodeURIComponent(q);
   var r=await fetch(u,{headers:{Authorization:'Bearer '+token}});
-  if(!r.ok){if(r.status===401){sessionStorage.removeItem('doroshka_spotify_token');spotifyToken='';}throw new Error('Spotify API: HTTP '+r.status);}
-  return (await r.json()).tracks.items||[];
+  var data=await r.json().catch(function(){return {};});
+  if(!r.ok){
+    if(r.status===401){sessionStorage.removeItem('doroshka_spotify_token');localStorage.removeItem('doroshka_spotify_token');spotifyToken='';}
+    var detail=data&&data.error&&(data.error.message||data.error.error_description||data.error.reason)||'без пояснения от Spotify';
+    throw new Error('Spotify API: HTTP '+r.status+' — '+detail);
+  }
+  return data.tracks&&data.tracks.items||[];
 }
 function renderSpotifyTracks(items){
   $('#spotify-track-results').innerHTML=items.map(function(t){
