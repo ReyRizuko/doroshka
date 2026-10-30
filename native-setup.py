@@ -1057,8 +1057,8 @@ for permission in (
 ):
     if 'android:name="' + permission + '"' not in m:
         m, count = re.subn(
-            r"(<manifest\\b[^>]*>)",
-            lambda match: match.group(1) + '\\n    <uses-permission android:name="' + permission + '" />',
+            r"(<manifest\b[^>]*>)",
+            lambda match: match.group(1) + '\n    <uses-permission android:name="' + permission + '" />',
             m,
             count=1,
         )
@@ -1068,7 +1068,7 @@ for permission in (
 if PKG + ".PlaybackService" not in m:
     service = (
         '        <service android:name="' + PKG + '.PlaybackService" android:exported="false"'
-        ' android:foregroundServiceType="mediaPlayback" />\\n'
+        ' android:foregroundServiceType="mediaPlayback" />\n'
     )
     m, count = re.subn(r"</application>", service + "    </application>", m, count=1)
     if count != 1:
