@@ -291,6 +291,11 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
           <button class="source-chip" type="button" data-source="yandex" aria-pressed="false">Яндекс Музыка</button>
           <button class="source-chip" type="button" data-source="soundcloud" aria-pressed="false">SoundCloud</button>
           <button class="source-chip" type="button" data-source="free" aria-pressed="false">Jamendo / Archive</button>
+          <button class="source-chip" type="button" data-source="spotify" aria-pressed="false">Spotify</button>
+          <button class="source-chip" type="button" data-source="apple" aria-pressed="false">Apple Music</button>
+          <button class="source-chip" type="button" data-source="deezer" aria-pressed="false">Deezer</button>
+          <button class="source-chip" type="button" data-source="bandcamp" aria-pressed="false">Bandcamp</button>
+          <button class="source-chip" type="button" data-source="vk" aria-pressed="false">VK Музыка</button>
         </div>
         <section class="source-panel" id="source-youtube">
           <div class="source-intro"><h3>YouTube</h3><p>Поиск клипов и музыкальных видео. Воспроизведение идёт через официальный YouTube-плеер — без скачивания и обхода ограничений платформы.</p></div>
@@ -313,6 +318,31 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
           <div class="source-intro"><h3>SoundCloud</h3><p>Поиск по каталогу SoundCloud в официальном веб-сервисе.</p></div>
           <form class="source-form" id="sc-form"><input class="search" id="sc-q" type="search" placeholder="Название или исполнитель" aria-label="Поиск в SoundCloud"><button class="btn primary" type="submit">Искать</button></form>
           <div class="external-search"><div><h3>SoundCloud</h3><p>Официальные страницы поиска и прослушивания.</p></div><a class="btn" id="sc-open" href="https://soundcloud.com" target="_blank" rel="noopener">Открыть</a></div>
+        </section>
+        <section class="source-panel" id="source-spotify" hidden>
+          <div class="source-intro"><h3>Spotify</h3><p>Поиск по каталогу Spotify. Импорт плейлистов в приложение по-прежнему доступен во вкладке Spotify.</p></div>
+          <form class="source-form" id="spotify-form"><input class="search" id="spotify-q" type="search" placeholder="Трек, альбом или исполнитель" aria-label="Поиск Spotify"><button class="btn primary" type="submit">Искать</button></form>
+          <div class="external-search"><div><h3>Spotify</h3><p>Официальные результаты поиска и прослушивание в Spotify.</p></div><a class="btn" id="spotify-open" href="https://open.spotify.com" target="_blank" rel="noopener">Открыть</a></div>
+        </section>
+        <section class="source-panel" id="source-apple" hidden>
+          <div class="source-intro"><h3>Apple Music</h3><p>Поиск музыки через официальный каталог Apple Music.</p></div>
+          <form class="source-form" id="apple-form"><input class="search" id="apple-q" type="search" placeholder="Трек, альбом или исполнитель" aria-label="Поиск Apple Music"><button class="btn primary" type="submit">Искать</button></form>
+          <div class="external-search"><div><h3>Apple Music</h3><p>Официальные результаты поиска.</p></div><a class="btn" id="apple-open" href="https://music.apple.com" target="_blank" rel="noopener">Открыть</a></div>
+        </section>
+        <section class="source-panel" id="source-deezer" hidden>
+          <div class="source-intro"><h3>Deezer</h3><p>Поиск треков и исполнителей в каталоге Deezer.</p></div>
+          <form class="source-form" id="deezer-form"><input class="search" id="deezer-q" type="search" placeholder="Трек, альбом или исполнитель" aria-label="Поиск Deezer"><button class="btn primary" type="submit">Искать</button></form>
+          <div class="external-search"><div><h3>Deezer</h3><p>Официальные результаты поиска.</p></div><a class="btn" id="deezer-open" href="https://www.deezer.com" target="_blank" rel="noopener">Открыть</a></div>
+        </section>
+        <section class="source-panel" id="source-bandcamp" hidden>
+          <div class="source-intro"><h3>Bandcamp</h3><p>Поиск релизов и независимых исполнителей.</p></div>
+          <form class="source-form" id="bandcamp-form"><input class="search" id="bandcamp-q" type="search" placeholder="Исполнитель, альбом или жанр" aria-label="Поиск Bandcamp"><button class="btn primary" type="submit">Искать</button></form>
+          <div class="external-search"><div><h3>Bandcamp</h3><p>Официальный каталог независимой музыки.</p></div><a class="btn" id="bandcamp-open" href="https://bandcamp.com" target="_blank" rel="noopener">Открыть</a></div>
+        </section>
+        <section class="source-panel" id="source-vk" hidden>
+          <div class="source-intro"><h3>VK Музыка</h3><p>Поиск в официальном сервисе VK. Для прослушивания может потребоваться вход в аккаунт.</p></div>
+          <form class="source-form" id="vk-form"><input class="search" id="vk-q" type="search" placeholder="Трек или исполнитель" aria-label="Поиск VK Музыка"><button class="btn primary" type="submit">Искать</button></form>
+          <div class="external-search"><div><h3>VK Музыка</h3><p>Официальные результаты поиска.</p></div><a class="btn" id="vk-open" href="https://vk.com/audio" target="_blank" rel="noopener">Открыть</a></div>
         </section>
         <section class="source-panel" id="source-free" hidden>
         <form class="webform" id="web-form">
@@ -812,7 +842,7 @@ $('#tab-lib').onclick=function(){setTab('lib');};
 $('#tab-sp').onclick=function(){setTab('sp');};
 $('#tab-web').onclick=function(){setTab('web');};
 function setSource(name){
-  ['youtube','yandex','soundcloud','free'].forEach(function(k){
+  ['youtube','yandex','soundcloud','free','spotify','apple','deezer','bandcamp','vk'].forEach(function(k){
     var panel=$('#source-'+k),button=document.querySelector('[data-source="'+k+'"]');
     panel.hidden=k!==name;
     button.setAttribute('aria-pressed',k===name?'true':'false');
@@ -1049,7 +1079,7 @@ if(ytKey){$('#yt-key-in').value=ytKey;$('#yt-status').textContent='Ключ YouT
 function ytStatus(t){$('#yt-status').textContent=t;}
 function openSearch(url){var w=window.open(url,'_blank','noopener');if(!w)toast('Разрешите открытие всплывающих окон для перехода к источнику.');}
 async function youtubeSearch(q){
-  if(!ytKey){ytLastQuery=q;ytStatus('Для поиска через API добавьте ключ YouTube Data API v3 ниже.');$('#yt-settings').open=true;return;}
+  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан. Открываю официальный поиск YouTube. Для результатов внутри приложения добавьте ключ YouTube Data API v3.');openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q));return;}
   ytStatus('Ищу на YouTube…');$('#yt-results').innerHTML='';$('#yt-player').hidden=true;$('#yt-player').innerHTML='';
   try{
     var u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&safeSearch=moderate&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(ytKey);
@@ -1093,6 +1123,17 @@ $('#sc-form').addEventListener('submit',function(e){
   var url='https://soundcloud.com/search?q='+encodeURIComponent(q);
   $('#sc-open').href=url;openSearch(url);
 });
+function bindCatalogSearch(formId,inputId,linkId,makeUrl){
+  $('#'+formId).addEventListener('submit',function(e){
+    e.preventDefault();var q=$('#'+inputId).value.trim();if(!q)return;
+    var url=makeUrl(q);$('#'+linkId).href=url;openSearch(url);
+  });
+}
+bindCatalogSearch('spotify-form','spotify-q','spotify-open',function(q){return 'https://open.spotify.com/search/'+encodeURIComponent(q);});
+bindCatalogSearch('apple-form','apple-q','apple-open',function(q){return 'https://music.apple.com/search?term='+encodeURIComponent(q);});
+bindCatalogSearch('deezer-form','deezer-q','deezer-open',function(q){return 'https://www.deezer.com/search/'+encodeURIComponent(q);});
+bindCatalogSearch('bandcamp-form','bandcamp-q','bandcamp-open',function(q){return 'https://bandcamp.com/search?q='+encodeURIComponent(q);});
+bindCatalogSearch('vk-form','vk-q','vk-open',function(q){return 'https://vk.com/audio?q='+encodeURIComponent(q);});
 setSource('youtube');
 
 /* ---------- запуск ---------- */
