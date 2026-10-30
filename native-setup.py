@@ -1075,7 +1075,7 @@ if PKG + ".PlaybackService" not in m:
         sys.exit("Не удалось добавить PlaybackService")
 
 if PKG + ".ControlReceiver" not in m:
-    receiver = '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\\n'
+    receiver = '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\n'
     m, count = re.subn(r"</application>", receiver + "    </application>", m, count=1)
     if count != 1:
         sys.exit("Не удалось добавить ControlReceiver")
