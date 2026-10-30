@@ -1366,7 +1366,7 @@ async function webSearch(q){
   $('#web-res').innerHTML='';
   $('#web-au').innerHTML=jamKey?'Поиск Jamendo…':'<div class="status">Jamendo не запущен: для него нужен client_id. Остальные источники работают без ключа.</div>';
   var terms=searchTerms(q);
-  var tasks=[jamKey?Promise.all(terms.slice(0,3).map(function(term){return jamSearch(term).catch(function(){return [];})).then(function(sets){var seen={},all=[];sets.forEach(function(set){set.forEach(function(t){if(t&&t.id&&!seen[t.id]){seen[t.id]=1;all.push(t);}});});return all;}):Promise.resolve([]),iaSearchMany(q)];
+  var tasks=[jamKey?Promise.all(terms.slice(0,3).map(function(term){return jamSearch(term).catch(function(){return [];});})).then(function(sets){var seen={},all=[];sets.forEach(function(set){set.forEach(function(t){if(t&&t.id&&!seen[t.id]){seen[t.id]=1;all.push(t);}});});return all;}):Promise.resolve([]),iaSearchMany(q)];
   var res=await Promise.allSettled(tasks),a=res[0],b=res[1],na=0,nb=0;
   if(a.status==='fulfilled'&&a.value.length){na=a.value.length;renderJam(a.value);}
   else if(jamKey&&a.status==='rejected')$('#web-au').textContent='Jamendo временно недоступен.';
