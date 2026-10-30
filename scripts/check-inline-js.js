@@ -18,7 +18,8 @@ scripts.forEach((source, index) => {
   new vm.Script(source, { filename: 'www/index.html:inline-' + (index + 1) });
 });
 
-const sourceNames = [...html.matchAll(/data-source="([^"]+)"/g)].map((match) => match[1]);
+const markup = html.slice(0, html.indexOf('<script'));
+const sourceNames = [...markup.matchAll(/data-source="([^"]+)"/g)].map((match) => match[1]);
 for (const name of sourceNames) {
   if (!html.includes('id="source-' + name + '"')) {
     throw new Error('Missing source panel for: ' + name);
