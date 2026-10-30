@@ -1399,9 +1399,9 @@ $('#web-form').addEventListener('submit',function(e){e.preventDefault();var q=$(
 $('#key-form').addEventListener('submit',function(e){
   e.preventDefault();var v=$('#key-in').value.trim();
   if(!v){toast('Вставьте Client ID');return;}
-  jamKey=v;ls.set('jamendoKey',jamKey);showKey();toast('Ключ сохранён');
+  jamKey=v;ls.set('jamendoKey',jamKey);showKey();syncJamendoFilter();toast('Ключ сохранён');
 });
-$('#key-reset').onclick=function(){jamKey='';ls.set('jamendoKey','');$('#key-in').value='';showKey();};
+$('#key-reset').onclick=function(){jamKey='';ls.set('jamendoKey','');$('#key-in').value='';showKey();syncJamendoFilter();};
 $('#web-au').addEventListener('click',async function(e){
   var btn=e.target.closest('[data-act]');if(!btn)return;
   var row=btn.closest('.row');var t=row&&jamTracks[row.dataset.jm];if(!t)return;
@@ -1433,6 +1433,7 @@ $('#global-jamendo-slot').appendChild($('#web-au'));
 $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Введите запрос для поиска в Audius.</div><div id="audius-results"></div>';
 $('#yt-open-search').hidden=true;
 var activeProvider='all';
+syncJamendoFilter();
 if(Native){
   var ns=$('#notification-status'),nb=$('#notification-settings-button');
   function refreshNotificationStatus(){
@@ -1457,8 +1458,17 @@ function setProviderFilter(name){
     b.setAttribute('aria-pressed',on?'true':'false');
   });
   document.querySelectorAll('[data-provider-group]').forEach(function(g){
-    g.hidden=name!=='all'&&g.dataset.providerGroup.split(' ').indexOf(name)===-1;
+    var visible=name==='all'||g.dataset.providerGroup.split(' ').indexOf(name)!==-1;
+    if(g.dataset.providerGroup==='jamendo'&&!jamKey)visible=false;
+    g.hidden=!visible;
   });
+}
+function syncJamendoFilter(){
+  var enabled=!!jamKey;
+  var chip=document.querySelector('[data-provider="jamendo"]');
+  if(chip)chip.hidden=!enabled;
+  if(activeProvider==='jamendo'&&!enabled)activeProvider='all';
+  setProviderFilter(activeProvider);
 }
 document.querySelectorAll('[data-provider]').forEach(function(b){
   b.addEventListener('click',function(){setProviderFilter(b.dataset.provider);});
