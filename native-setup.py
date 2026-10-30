@@ -119,6 +119,8 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
+import android.os.SystemClock;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -181,6 +183,35 @@ public class PlaybackPlugin extends Plugin {
             }
         });
         call.resolve();
+    }
+
+    @PluginMethod
+    public void getNotificationStatus(PluginCall call) {
+        boolean granted = Build.VERSION.SDK_INT < 33
+                || getContext().checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+        JSObject result = new JSObject();
+        result.put("granted", granted);
+        result.put("supported", Build.VERSION.SDK_INT >= 33);
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void requestNotifications(PluginCall call) {
+        askNotifications();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Не удалось открыть настройки уведомлений", e);
+        }
     }
 
     @PluginMethod
@@ -936,7 +967,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         long actions = PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE
                 | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS
                 | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP;
-        session.setPlaybackState(new PlaybackState.Builder().setActions(actions).setState(st, pos, 1f).build());
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(actions)
+                .setState(st, pos, 1f, SystemClock.elapsedRealtime())
+                .build());
     }
 
     private void ensureChannel() {
@@ -972,9 +1006,15 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         b.setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle(title)
                 .setContentText(text)
+                .setCategory(Notification.CATEGORY_TRANSPORT)
+                .setPriority(Notification.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
         Bitmap art = artwork(it);
         if (art != null) b.setLargeIcon(art);
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -989,7 +1029,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         b.addAction(action(android.R.drawable.ic_menu_close_clear_cancel, "Закрыть", "STOP", 4));
         b.setStyle(new Notification.MediaStyle()
                 .setMediaSession(session.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2));
+                .setShowCancelButton(true)
+                .setCancelButtonIntent(control("STOP", 4))
+                .setShowActionsInCompactView(0, 1, 2))
+                .setDeleteIntent(control("STOP", 4));
         return b.build();
     }
 
