@@ -31,7 +31,7 @@
 
 Без ключа поиск открывается на официальном сайте YouTube. Ключ сохраняется в localStorage на текущем устройстве. Ограничьте ключ в Google Cloud по API и, если возможно, по приложениям/доменам. У YouTube API есть квоты.
 
-### Настройка Jamendo
+### Подключение Spotify\n\nВ Spotify Developer Dashboard → Settings → Redirect URIs добавьте оба адреса и сохраните:\n\n- Веб-версия: `https://reyrizuko.github.io/doroshka/spotify-callback.html`\n- Android APK: `doroshka://spotify-callback`\n\nВ приложении нажмите «Подключить Spotify». Android откроет системный браузер, а после подтверждения вернёт пользователя в «Дорожку». Используется Authorization Code с PKCE; Client Secret в приложение не помещается.\n\n### Настройка Jamendo
 
 1. Зарегистрируйтесь на https://devportal.jamendo.com/
 2. Создайте приложение и скопируйте Client ID.
