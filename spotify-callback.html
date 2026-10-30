@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Подключение Spotify — Дорожка</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,sans-serif;background:#0b0d13;color:#f2f4fa}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+main{width:min(100%,520px);padding:28px;border:1px solid #2a3345;border-radius:18px;background:#141823}
+h1{font-size:21px;margin:0 0 12px}p{color:#b7c0d2;margin:0}
+</style>
+</head>
+<body>
+<main>
+<h1>Подключение Spotify</h1>
+<p id="status" role="status">Проверяю ответ Spotify…</p>
+</main>
+<script>
+(async function(){
+  var status=document.getElementById('status');
+  function fail(message){status.textContent=message;}
+  var params=new URLSearchParams(location.search);
+  var error=params.get('error');
+  if(error){fail('Spotify отменил подключение: '+error+'. Вернитесь в «Дорожку» и попробуйте снова.');return;}
+  var code=params.get('code'),state=params.get('state');
+  var expected=sessionStorage.getItem('doroshka_spotify_state');
+  var verifier=sessionStorage.getItem('doroshka_spotify_verifier');
+  if(!code||!state||!expected||state!==expected||!verifier){
+    fail('Не удалось проверить OAuth-ответ. Вернитесь в «Дорожку» и начните подключение заново.');return;
+  }
+  try{
+    var redirectUri=location.origin+location.pathname.replace(/\/spotify-callback\.html$/,'')+'/spotify-callback.html';
+    var body=new URLSearchParams({
+      client_id:'f4d35555f10f4685b85d9ee85b3f102d',
+      grant_type:'authorization_code',
+      code:code,
+      redirect_uri:redirectUri,
+      code_verifier:verifier
+    });
+    var response=await fetch('https://accounts.spotify.com/api/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:body.toString()
+    });
+    var data=await response.json();
+    if(!response.ok||!data.access_token)throw new Error(data.error_description||data.error||('HTTP '+response.status));
+    sessionStorage.setItem('doroshka_spotify_token',data.access_token);
+    sessionStorage.setItem('doroshka_spotify_expiry',String(Date.now()+(data.expires_in||3600)*1000));
+    sessionStorage.removeItem('doroshka_spotify_verifier');
+    sessionStorage.removeItem('doroshka_spotify_state');
+    status.textContent='Аккаунт подключён. Возвращаюсь в «Дорожку»…';
+    location.replace(location.pathname.replace(/spotify-callback\.html$/,'')+'?spotify_connected=1');
+  }catch(e){fail('Не удалось обменять код авторизации: '+(e.message||'ошибка сети')+'. Проверьте Redirect URI в Spotify Dashboard и повторите подключение.');}
+})();
+</script>
+</body>
+</html>
