@@ -516,7 +516,7 @@ body{padding-top:18px;background:
             <section class="global-result-group provider-note" data-provider-group="yandex"><div class="global-result-title"><h4>Яндекс Музыка</h4><span>интеграция не подключена</span></div><p>Для поиска и воспроизведения внутри Doroshka нужен разрешённый API и авторизация. Сейчас встроенный поиск каталога недоступен; внешняя страница не будет открываться автоматически.</p></section>
             <section class="global-result-group provider-note" data-provider-group="soundcloud"><div class="global-result-title"><h4>SoundCloud</h4><span>интеграция не подключена</span></div><p>Для поиска нужен доступ к API SoundCloud. Встроенный поиск и воспроизведение пока не подключены.</p></section>
             <section class="global-result-group provider-note" data-provider-group="spotify"><div class="global-result-title"><h4>Spotify</h4><span>интеграция не подключена</span></div><p>Каталог Spotify требует авторизации через Spotify API; воспроизведение полных треков ограничено самим сервисом. Встроенный поиск пока не подключён. Импорт плейлистов остаётся отдельной функцией библиотеки.</p></section>
-            <section class="global-result-group" data-provider-group="apple"><div class="global-result-title"><h4>Apple / iTunes</h4><span>поиск каталога · 30-секундные фрагменты</span></div><div id="global-itunes-slot"><div class="status">Введите запрос для поиска в каталоге Apple.</div></div></section>
+            <section class="global-result-group provider-note" data-provider-group="apple"><div class="global-result-title"><h4>Apple Music</h4><span>интеграция не подключена</span></div><p>Для полного воспроизведения Apple Music требует авторизацию и подписную интеграцию. Каталожные превью Apple разрешено использовать только для продвижения соответствующего контента, а не как самостоятельный музыкальный плеер.</p></section>
             <section class="global-result-group provider-note" data-provider-group="deezer"><div class="global-result-title"><h4>Deezer</h4><span>интеграция не подключена</span></div><p>Публичный поиск и воспроизведение зависят от доступности API и прав приложения. Сейчас встроенная интеграция не настроена.</p></section>
             <section class="global-result-group provider-note" data-provider-group="bandcamp"><div class="global-result-title"><h4>Bandcamp</h4><span>интеграция не подключена</span></div><p>У Bandcamp нет общедоступного универсального API для поиска и потокового воспроизведения сторонним плеером. Поэтому результаты не подменяются ссылками на сайт.</p></section>
             <section class="global-result-group provider-note" data-provider-group="vk"><div class="global-result-title"><h4>VK Музыка</h4><span>интеграция не подключена</span></div><p>Для встроенного поиска требуется разрешённый VK API и авторизация пользователя. Пока этот источник не подключён.</p></section>
@@ -1220,7 +1220,7 @@ async function nativePick(){
 }
 
 /* ---------- поиск: Jamendo и Internet Archive ---------- */
-var IA='https://archive.org',JAM='https://api.jamendo.com/v3.0',AUD='https://api.audius.co/v1',webItems={},jamTracks={},audiusTracks={},itunesTracks={};
+var IA='https://archive.org',JAM='https://api.jamendo.com/v3.0',AUD='https://api.audius.co/v1',webItems={},jamTracks={},audiusTracks={};
 var jamKey=ls.get('jamendoKey','');
 function webStatus(t){$('#web-status').textContent=t;}
 function showKey(){$('#jam-key').hidden=!!jamKey;$('#key-reset').hidden=!jamKey;}
@@ -1246,9 +1246,22 @@ async function jamSearch(q){
   return (j.results||[]).filter(function(t){return t.audio;});
 }
 async function audiusSearch(q){
-  var u=AUD+'/tracks/search?query='+encodeURIComponent(q)+'&limit=25';
-  var r=await fetch(u,{headers:{'Accept':'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);
-  var j=await r.json();return (j.data||[]).filter(function(t){return t&&t.id&&t.title;});
+  async function get(path){
+    var r=await fetch(AUD+path,{headers:{'Accept':'application/json'}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var j=await r.json();return j.data||[];
+  }
+  var base=await get('/tracks/search?query='+encodeURIComponent(q)+'&limit=25');
+  var users=[];
+  try{users=await get('/users/search?query='+encodeURIComponent(q)+'&limit=5&sort_method=relevant');}catch(e){}
+  var artistLists=await Promise.all(users.slice(0,5).map(function(u){
+    return get('/users/'+encodeURIComponent(u.id)+'/tracks?limit=20&sort_method=plays&sort_direction=desc').catch(function(){return [];});
+  }));
+  var seen={},all=[];
+  base.concat.apply(base,artistLists).forEach(function(t){
+    if(t&&t.id&&t.title&&!seen[t.id]){seen[t.id]=1;all.push(t);}
+  });
+  return all.slice(0,60);
 }
 function audiusRec(t){
   var cover=t.artwork&&(t.artwork['480x480']||t.artwork['150x150']||t.artwork['1000x1000'])||'';
@@ -1260,24 +1273,6 @@ function renderAudius(list){
   $('#global-audius-slot').innerHTML=list.map(function(t){var r=audiusRec(t);return '<div class="row" data-au="'+esc(t.id)+'"><button class="row-main" data-act="auplay" aria-label="Играть: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">'+(r.dur?fmt(r.dur):'')+'</span></button><button class="x" data-act="auadd" aria-label="Добавить в медиатеку">'+svg('plus',18)+'</button></div>';}).join('');
 }
 
-async function itunesSearch(q){
-  async function request(country){
-    var u='https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&media=music&entity=song&limit=25&country='+country;
-    var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);
-    var j=await r.json();return (j.results||[]).filter(function(t){return t&&t.trackId&&t.previewUrl;});
-  }
-  var list=await request('RU');
-  if(!list.length)list=await request('US');
-  return list;
-}
-function itunesRec(t){
-  return {id:'it'+t.trackId,name:'itunes:'+t.trackId,size:0,title:t.trackName||'Без названия',artist:t.artistName||'',album:t.collectionName||'',blob:null,cover:null,
-    remoteUrl:t.previewUrl,coverRemote:t.artworkUrl100||'',dur:30};
-}
-function renderItunes(list){
-  list.forEach(function(t){itunesTracks[t.trackId]=t;});
-  $('#global-itunes-slot').innerHTML=list.map(function(t){var r=itunesRec(t);return '<div class="row" data-it="'+esc(t.trackId)+'"><button class="row-main" data-act="itplay" aria-label="Прослушать фрагмент: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">0:30</span></button><button class="x" data-act="itadd" aria-label="Добавить в медиатеку">'+svg('plus',18)+'</button></div>';}).join('');
-}
 async function iaSearch(q){
   var url=IA+'/advancedsearch.php?q='+encodeURIComponent('('+q+') AND mediatype:audio')+'&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=15&sort%5B%5D=downloads+desc&output=json';
   var r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1405,15 +1400,13 @@ async function runGlobalSearch(q){
   $('#global-q').value=q;
   $('#global-status').textContent='Ищу в подключённых источниках…';
   $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Ищу в Audius…</div><div id="audius-results"></div>';
-  var results=await Promise.allSettled([youtubeSearch(q),webSearch(q),audiusSearch(q),itunesSearch(q)]);
-  var ar=results[2],ir=results[3],yt=$('#yt-status').textContent,free=$('#web-status').textContent,notes=[];
+  var results=await Promise.allSettled([youtubeSearch(q),webSearch(q),audiusSearch(q)]);
+  var ar=results[2],yt=$('#yt-status').textContent,free=$('#web-status').textContent,notes=[];
   if(ar.status==='fulfilled'&&ar.value.length){$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Найдено в Audius: '+ar.value.length+'</div><div id="audius-results"></div>';renderAudius(ar.value);}
   else $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">'+(ar.status==='rejected'?'Audius временно недоступен.':'В Audius ничего не найдено по этому запросу.')+'</div><div id="audius-results"></div>';
   if(yt)notes.push('YouTube: '+yt);
   if(free)notes.push(free);
   notes.push(ar.status==='fulfilled'?'Audius: '+ar.value.length+' треков':'Audius: ошибка запроса');
-  if(ir.status==='fulfilled'){renderItunes(ir.value);notes.push('Apple: '+ir.value.length+' фрагментов');}
-  else{$('#global-itunes-slot').innerHTML='<div class="status">Каталог Apple временно недоступен.</div>';notes.push('Apple: ошибка запроса');}
   $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
@@ -1429,14 +1422,6 @@ $('#global-audius-slot').addEventListener('click',async function(e){
   var id=await addRemoteRec(audiusRec(t));
   if(b.dataset.act==='auplay')playIds(sorted().map(function(x){return x.id;}),id);
   else if(b.dataset.act==='auadd'){b.disabled=true;b.textContent='✓';toast('Добавлено в медиатеку');}
-});
-$('#global-itunes-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act]');if(!b)return;
-  var row=b.closest('[data-it]');if(!row)return;
-  var t=itunesTracks[row.dataset.it];if(!t)return;
-  var id=await addRemoteRec(itunesRec(t));
-  if(b.dataset.act==='itplay')playIds(sorted().map(function(x){return x.id;}),id);
-  else if(b.dataset.act==='itadd'){b.disabled=true;b.textContent='✓';toast('Фрагмент добавлен в медиатеку');}
 });
 
 /* ---------- Поиск в официальном каталоге Spotify ---------- */
