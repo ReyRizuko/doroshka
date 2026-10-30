@@ -681,6 +681,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } else {
             wantPlay = false;
             handler.removeCallbacks(ticker);
+            releaseWifiLock();
+            abandonFocus();
             updateSession();
             updateNotification();
             emitState();
@@ -738,6 +740,20 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         handler.post(ticker);
     }
 
+    private void releaseWifiLock() {
+        try {
+            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void abandonFocus() {
+        try {
+            if (audio != null) audio.abandonAudioFocus(this);
+        } catch (Exception ignored) {
+        }
+    }
+
     void pause(boolean byFocus) {
         wantPlay = false;
         pausedByFocus = byFocus;
@@ -746,6 +762,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } catch (Exception ignored) {
         }
         handler.removeCallbacks(ticker);
+        releaseWifiLock();
+        // При временной потере фокуса не отказываемся от него:
+        // система должна прислать AUDIOFOCUS_GAIN для автоматического продолжения.
+        if (!byFocus) abandonFocus();
         updateSession();
         updateNotification();
         emitState();
@@ -830,10 +850,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             audio.abandonAudioFocus(this);
         } catch (Exception ignored) {
         }
-        try {
-            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
-        } catch (Exception ignored) {
-        }
+        releaseWifiLock();
         try {
             stopForeground(true);
         } catch (Exception ignored) {
@@ -1068,10 +1085,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } catch (Exception ignored) {
         }
         releasePlayer();
-        try {
-            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
-        } catch (Exception ignored) {
-        }
+        releaseWifiLock();
+        abandonFocus();
         if (session != null) {
             session.setActive(false);
             session.release();
