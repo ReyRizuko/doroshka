@@ -150,18 +150,24 @@ public class PlaybackPlugin extends Plugin {
 
     private void askNotifications() {
         if (asked || Build.VERSION.SDK_INT < 33) return;
-        asked = true;
         final String perm = "android.permission.POST_NOTIFICATIONS";
         try {
             final Activity a = getActivity();
-            if (a != null && getContext().checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
-                a.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
+            if (a == null) return;
+            if (a.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) {
+                asked = true;
+                return;
+            }
+            a.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (Build.VERSION.SDK_INT >= 33
+                            && a.checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+                        asked = true;
                         a.requestPermissions(new String[]{perm}, 4242);
                     }
-                });
-            }
+                }
+            });
         } catch (Exception ignored) {
         }
     }
@@ -1041,27 +1047,42 @@ for name, code in FILES.items():
 with open(MANIFEST, encoding="utf-8") as f:
     m = f.read()
 
-if "PlaybackService" not in m:
-    perms = (
-        '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n'
-        '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />\n'
-        '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
-        '    <uses-permission android:name="android.permission.WAKE_LOCK" />\n'
-    )
-    comps = (
+# Разрешения проверяются независимо от компонентов: повторный запуск должен
+# исправлять неполный манифест, а не пропускать его целиком.
+for permission in (
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.WAKE_LOCK",
+):
+    if 'android:name="' + permission + '"' not in m:
+        m, count = re.subn(
+            r"(<manifest\\b[^>]*>)",
+            lambda match: match.group(1) + '\\n    <uses-permission android:name="' + permission + '" />',
+            m,
+            count=1,
+        )
+        if count != 1:
+            sys.exit("Не удалось добавить разрешение " + permission)
+
+if PKG + ".PlaybackService" not in m:
+    service = (
         '        <service android:name="' + PKG + '.PlaybackService" android:exported="false"'
-        ' android:foregroundServiceType="mediaPlayback" />\n'
-        '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\n'
+        ' android:foregroundServiceType="mediaPlayback" />\\n'
     )
-    m, n1 = re.subn(r"(\s*)<application", "\n" + perms + r"\1<application", m, count=1)
-    m, n2 = re.subn(r"</application>", comps + "    </application>", m, count=1)
-    if n1 != 1 or n2 != 1:
-        sys.exit("Не удалось изменить AndroidManifest.xml")
-    with open(MANIFEST, "w", encoding="utf-8") as f:
-        f.write(m)
-    print("AndroidManifest.xml обновлён")
-else:
-    print("AndroidManifest.xml уже обновлён")
+    m, count = re.subn(r"</application>", service + "    </application>", m, count=1)
+    if count != 1:
+        sys.exit("Не удалось добавить PlaybackService")
+
+if PKG + ".ControlReceiver" not in m:
+    receiver = '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\\n'
+    m, count = re.subn(r"</application>", receiver + "    </application>", m, count=1)
+    if count != 1:
+        sys.exit("Не удалось добавить ControlReceiver")
+
+with open(MANIFEST, "w", encoding="utf-8") as f:
+    f.write(m)
+print("AndroidManifest.xml: разрешения и компоненты проверены")
 
 # ---- Spotify OAuth deep link ----
 if 'android:host="spotify-callback"' not in m:
