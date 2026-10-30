@@ -701,6 +701,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             wantPlay = false;
             prepared = false;
             handler.removeCallbacks(ticker);
+            releaseWifiLock();
+            abandonFocus();
             updateSession();
             updateNotification();
             emitState();
