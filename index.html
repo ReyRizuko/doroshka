@@ -935,10 +935,39 @@ function playIds(ids,startId){
   load(order[pos]);
 }
 function nItem(id){var it=byId(id);return it?{id:it.id,url:it.url,title:it.title,artist:it.artist||'',album:it.album||''}:null;}
+var nativeQueueSeq=0;
+function nativeArtwork(it){
+  return new Promise(function(resolve){
+    if(!it)return resolve('');
+    var blob=it.cover instanceof Blob?it.cover:null;
+    function encode(source){
+      if(!source)return resolve('');
+      var img=new Image(),tmp=URL.createObjectURL(source);
+      img.onload=function(){
+        try{
+          var c=document.createElement('canvas'),w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+          if(!w||!h){URL.revokeObjectURL(tmp);return resolve('');}
+          var scale=Math.min(1,512/Math.max(w,h));c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
+          c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+          var data=c.toDataURL('image/jpeg',0.78);URL.revokeObjectURL(tmp);resolve(data);
+        }catch(e){URL.revokeObjectURL(tmp);resolve('');}
+      };
+      img.onerror=function(){URL.revokeObjectURL(tmp);resolve('');};img.src=tmp;
+    }
+    if(blob){encode(blob);return;}
+    if(it.coverUrl&&/^data:image\\//i.test(it.coverUrl))return resolve(it.coverUrl);
+    if(it.coverUrl){fetch(it.coverUrl).then(function(r){if(!r.ok)throw new Error('art');return r.blob();}).then(encode).catch(function(){resolve('');});return;}
+    resolve('');
+  });
+}
 function nativeQueue(keep){
-  var items=order.map(nItem).filter(Boolean);
-  nativeLive=true;
-  nCall(Native.setQueue({items:items,index:Math.max(0,pos),keep:!!keep,repeat:repeat}));
+  var seq=++nativeQueueSeq,ids=order.slice();
+  Promise.all(ids.map(async function(id){var item=nItem(id);if(item)item.art=await nativeArtwork(byId(id));return item;})).then(function(items){
+    if(seq!==nativeQueueSeq)return;
+    nativeLive=true;nCall(Native.setQueue({items:items.filter(Boolean),index:Math.max(0,pos),keep:!!keep,repeat:repeat}));
+  }).catch(function(){
+    if(seq===nativeQueueSeq){nativeLive=true;nCall(Native.setQueue({items:order.map(nItem).filter(Boolean),index:Math.max(0,pos),keep:!!keep,repeat:repeat}));}
+  });
 }
 function load(id){
   var it=byId(id);if(!it)return;
