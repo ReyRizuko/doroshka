@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-PKG = "app.doroshka.player"
+PKG = "app.dorozhka.player"
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ANDROID = os.path.join(ROOT, "android", "app", "src", "main")
 JAVA_DIR = os.path.join(ANDROID, "java", *PKG.split("."))
