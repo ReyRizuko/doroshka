@@ -496,6 +496,7 @@ body{padding-top:18px;background:
             <button class="provider-chip" type="button" data-provider="youtube" aria-pressed="false">YouTube</button>
             <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
+            <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
             <button class="provider-chip" type="button" data-provider="yandex" aria-pressed="false">Яндекс Музыка</button>
             <button class="provider-chip" type="button" data-provider="soundcloud" aria-pressed="false">SoundCloud</button>
             <button class="provider-chip" type="button" data-provider="spotify" aria-pressed="false">Spotify</button>
@@ -512,6 +513,7 @@ body{padding-top:18px;background:
           <div class="global-results">
             <section class="global-result-group" data-provider-group="youtube"><div class="global-result-title"><h4>YouTube</h4><span>поиск через YouTube Data API · воспроизведение официальным встроенным плеером</span></div><div id="global-yt-slot"></div></section>
             <section class="global-result-group" data-provider-group="jamendo archive"><div class="global-result-title"><h4>Jamendo · Internet Archive</h4><span>свободные аудиотреки · добавление в библиотеку</span></div><div id="global-free-slot"></div></section>
+            <section class="global-result-group" data-provider-group="audius"><div class="global-result-title"><h4>Audius</h4><span>поиск и воспроизведение доступных треков в приложении</span></div><div id="global-audius-slot"></div></section>
             <section class="global-result-group provider-note" data-provider-group="yandex"><div class="global-result-title"><h4>Яндекс Музыка</h4><span>интеграция не подключена</span></div><p>Для поиска и воспроизведения внутри Doroshka нужен разрешённый API и авторизация. Сейчас встроенный поиск каталога недоступен; внешняя страница не будет открываться автоматически.</p></section>
             <section class="global-result-group provider-note" data-provider-group="soundcloud"><div class="global-result-title"><h4>SoundCloud</h4><span>интеграция не подключена</span></div><p>Для поиска нужен доступ к API SoundCloud. Встроенный поиск и воспроизведение пока не подключены.</p></section>
             <section class="global-result-group provider-note" data-provider-group="spotify"><div class="global-result-title"><h4>Spotify</h4><span>интеграция не подключена</span></div><p>Каталог Spotify требует авторизации через Spotify API; воспроизведение полных треков ограничено самим сервисом. Встроенный поиск пока не подключён. Импорт плейлистов остаётся отдельной функцией библиотеки.</p></section>
@@ -1219,7 +1221,7 @@ async function nativePick(){
 }
 
 /* ---------- поиск: Jamendo и Internet Archive ---------- */
-var IA='https://archive.org',JAM='https://api.jamendo.com/v3.0',webItems={},jamTracks={};
+var IA='https://archive.org',JAM='https://api.jamendo.com/v3.0',AUD='https://api.audius.co/v1',webItems={},jamTracks={},audiusTracks={};
 var jamKey=ls.get('jamendoKey','');
 function webStatus(t){$('#web-status').textContent=t;}
 function showKey(){$('#jam-key').hidden=!!jamKey;$('#key-reset').hidden=!jamKey;}
@@ -1243,6 +1245,20 @@ async function jamSearch(q){
   var j=await r.json();
   if(j.headers&&j.headers.status==='failed')throw new Error(j.headers.error_message||'Jamendo');
   return (j.results||[]).filter(function(t){return t.audio;});
+}
+async function audiusSearch(q){
+  var u=AUD+'/tracks/search?query='+encodeURIComponent(q)+'&limit=25';
+  var r=await fetch(u,{headers:{'Accept':'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);
+  var j=await r.json();return (j.data||[]).filter(function(t){return t&&t.id&&t.title;});
+}
+function audiusRec(t){
+  var cover=t.artwork&&(t.artwork['480x480']||t.artwork['150x150']||t.artwork['1000x1000'])||'';
+  return {id:'au'+t.id,name:'audius:'+t.id,size:0,title:t.title||'Без названия',artist:t.user&&t.user.name||t.artist||'',album:'',blob:null,cover:null,
+    remoteUrl:AUD+'/tracks/'+encodeURIComponent(t.id)+'/stream?app_name=Doroshka',coverRemote:cover,dur:t.duration||0};
+}
+function renderAudius(list){
+  list.forEach(function(t){audiusTracks[t.id]=t;});
+  $('#global-audius-slot').innerHTML=list.map(function(t){var r=audiusRec(t);return '<div class="row" data-au="'+esc(t.id)+'"><button class="row-main" data-act="auplay" aria-label="Играть: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">'+(r.dur?fmt(r.dur):'')+'</span></button><button class="x" data-act="auadd" aria-label="Добавить в медиатеку">'+svg('plus',18)+'</button></div>';}).join('');
 }
 async function iaSearch(q){
   var url=IA+'/advancedsearch.php?q='+encodeURIComponent('('+q+') AND mediatype:audio')+'&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=15&sort%5B%5D=downloads+desc&output=json';
@@ -1349,6 +1365,7 @@ $('#global-yt-slot').appendChild($('#yt-results'));
 $('#global-free-slot').appendChild($('#web-status'));
 $('#global-free-slot').appendChild($('#web-au'));
 $('#global-free-slot').appendChild($('#web-res'));
+$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Введите запрос для поиска в Audius.</div><div id="audius-results"></div>';
 $('#yt-open-search').hidden=true;
 var activeProvider='all';
 function setProviderFilter(name){
@@ -1384,19 +1401,30 @@ async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
   $('#global-status').textContent='Ищу в подключённых источниках…';
-  $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';
+  $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Ищу в Audius…</div><div id="audius-results"></div>';
   renderCatalogLinks(q);
-  await Promise.allSettled([youtubeSearch(q),webSearch(q)]);
-  var yt=$('#yt-status').textContent,free=$('#web-status').textContent,notes=[];
+  var results=await Promise.allSettled([youtubeSearch(q),webSearch(q),audiusSearch(q)]);
+  var ar=results[2],yt=$('#yt-status').textContent,free=$('#web-status').textContent,notes=[];
+  if(ar.status==='fulfilled'&&ar.value.length){$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Найдено в Audius: '+ar.value.length+'</div><div id="audius-results"></div>';renderAudius(ar.value);}
+  else $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">'+(ar.status==='rejected'?'Audius временно недоступен.':'В Audius ничего не найдено по этому запросу.')+'</div><div id="audius-results"></div>';
   if(yt)notes.push('YouTube: '+yt);
   if(free)notes.push(free);
-  $('#global-status').textContent=notes.join(' · ')+' Другие каталоги доступны по официальным ссылкам выше.';
+  notes.push(ar.status==='fulfilled'?'Audius: '+ar.value.length+' треков':'Audius: ошибка запроса');
+  $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
   e.preventDefault();runGlobalSearch($('#global-q').value.trim());
 });
 document.querySelectorAll('[data-artist]').forEach(function(b){
   b.addEventListener('click',function(){runGlobalSearch(b.dataset.artist);});
+});
+$('#global-audius-slot').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var row=b.closest('[data-au]');if(!row)return;
+  var t=audiusTracks[row.dataset.au];if(!t)return;
+  var id=await addRemoteRec(audiusRec(t));
+  if(b.dataset.act==='auplay')playIds(sorted().map(function(x){return x.id;}),id);
+  else if(b.dataset.act==='auadd'){b.disabled=true;b.textContent='✓';toast('Добавлено в медиатеку');}
 });
 
 /* ---------- Поиск в официальном каталоге Spotify ---------- */
