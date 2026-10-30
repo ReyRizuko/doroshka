@@ -997,10 +997,11 @@ else:
 
 # ---- Spotify OAuth deep link ----
 if 'android:host="spotify-callback"' not in m:
-    activity_re = r'<activity\b(?=[^>]*android:name="(?:\.MainActivity|' + re.escape(PKG + '.MainActivity') + r')")[^>]*>'
-    match = re.search(activity_re, m)
+    activity_tags = list(re.finditer(r'<activity\b[^>]*>', m))
+    match = next((item for item in activity_tags if 'MainActivity' in item.group(0)), None)
     if not match:
-        sys.exit("Не найдена MainActivity для Spotify OAuth deep link")
+        sys.exit("Не найдена MainActivity для Spotify OAuth deep link. Activity tags: " +
+                 repr([item.group(0) for item in activity_tags]))
     tag = match.group(0)
     if 'android:launchMode=' not in tag:
         tag = tag[:-1] + ' android:launchMode="singleTask">'
