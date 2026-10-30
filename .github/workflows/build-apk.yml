@@ -2,6 +2,8 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
+    branches: [main, master, 'feat/**']
+  pull_request:
     branches: [main, master]
 jobs:
   apk:
@@ -23,6 +25,8 @@ jobs:
           java-version: 21
       - run: npm install
       - run: node scripts/prepare.js
+      - name: Check application JavaScript and provider panels
+        run: node scripts/check-inline-js.js
       - run: npx cap add android
       - run: npx cap sync android
       - name: Build
