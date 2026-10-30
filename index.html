@@ -86,7 +86,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--fg);border:0}
 
 .side{min-width:0;display:grid;gap:12px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--surface-2);border-radius:12px}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--surface-2);border-radius:12px}
 .tab{min-height:40px;border-radius:9px;text-align:center;font-weight:500;color:var(--muted)}
 .tab[aria-selected=true]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .tab small{font:400 12px var(--f-mono);margin-left:4px}
@@ -155,6 +155,12 @@ button.trk-row:hover{background:var(--surface-2)}
 body.has-mini .toast{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.webform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.sec{margin:6px 0 0;font:700 13px var(--f-display);letter-spacing:-.01em}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 4px;border-top:1px solid var(--line)}
+.frow .rt{min-width:0}
+.btn[disabled]{opacity:.55;cursor:default}
 .lbl-folder{display:none}
 @media (min-width:480px){.lbl-folder{display:inline}}
 </style>
@@ -197,7 +203,8 @@ body.has-mini .toast{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
     <section class="side">
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" id="tab-lib" aria-selected="true">Файлы<small id="n-lib">0</small></button>
-        <button class="tab" role="tab" id="tab-sp" aria-selected="false">Из Spotify<small id="n-sp">0</small></button>
+        <button class="tab" role="tab" id="tab-sp" aria-selected="false">Spotify<small id="n-sp">0</small></button>
+        <button class="tab" role="tab" id="tab-web" aria-selected="false">Интернет</button>
       </div>
       <div class="status" id="status" aria-live="polite"></div>
 
@@ -218,6 +225,17 @@ body.has-mini .toast{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
           <button class="btn primary" id="btn-list"><i data-i="plus"></i><span>Загрузить плейлист</span></button>
         </div>
         <div id="sp-lists" style="display:grid;gap:12px"></div>
+      </div>
+
+      <div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
+        <form class="webform" id="web-form">
+          <input class="search" id="web-q" type="search" placeholder="Исполнитель или название" aria-label="Поиск в интернете">
+          <button class="btn primary" type="submit">Найти</button>
+        </form>
+        <p class="hint">Audius играет онлайн без скачивания: нажмите на трек, он добавится в «Файлы» и запустится. Internet Archive: свободная музыка, которую можно сохранить в файлы. Популярных хитов из Spotify здесь нет.</p>
+        <div id="web-status" class="status" aria-live="polite"></div>
+        <div id="web-au" class="list"></div>
+        <div id="web-res" style="display:grid;gap:10px"></div>
       </div>
     </section>
   </main>
@@ -269,6 +287,15 @@ var lib=[], lists=[], libVer=0, mcache=new Map(), openLists=new Set();
 var order=[], pos=-1, baseList=[], shuffleOn=false, repeat=0, curId=null, errRun=0;
 var durs=ls.get('dur',{}), tab='lib', filter='', seeking=false, probing=false;
 var audio=$('#audio');
+var Native=null,nativeOn=false;
+try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){Native=window.Capacitor.registerPlugin('Playback');}}catch(e){}
+function nativeSync(){
+  if(!Native)return;
+  var it=curId?byId(curId):null;
+  if(!it){if(nativeOn){nativeOn=false;Native.stop().catch(function(){});}return;}
+  nativeOn=true;
+  Native.update({title:it.title,artist:it.artist||'',playing:!audio.paused}).catch(function(){});
+}
 
 /* ---------- IndexedDB ---------- */
 var db=null;
@@ -301,10 +328,10 @@ function readTags(f){
   });
 }
 function mk(r){
-  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob,cover:r.cover||null};
-  it.url=URL.createObjectURL(r.blob);
-  it.coverUrl=r.cover?URL.createObjectURL(r.cover):'';
-  it.dur=durs[r.id]||0;
+  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl};
+  it.url=r.remoteUrl?r.remoteUrl:URL.createObjectURL(r.blob);
+  it.coverUrl=r.remoteUrl?(r.coverRemote||''):(r.cover?URL.createObjectURL(r.cover):'');
+  it.dur=durs[r.id]||r.dur||0;
   it.nTitle=normTitle(it.title);
   it.nArtist=' '+norm(it.artist)+' ';
   it.nName=' '+norm(r.name.replace(/\.[^.]+$/,''))+' ';
@@ -322,6 +349,7 @@ async function addFiles(fileList){
     setStatus('Добавляю '+(i+1)+' из '+files.length+'…');
     if(lib.some(function(x){return x.name===f.name&&x.size===f.size;})){dup++;continue;}
     var m=await readTags(f);
+    if(f._meta){if(f._meta.title)m.title=f._meta.title;if(f._meta.artist)m.artist=f._meta.artist;}
     var rec={id:uid(),name:f.name,size:f.size,blob:f,title:m.title,artist:m.artist,album:m.album,cover:m.cover};
     lib.push(mk(rec));
     await idb('files','readwrite',function(s){return s.put(rec);});
@@ -338,7 +366,7 @@ function probeDurations(){
   if(probing)return;probing=true;
   (async function(){
     for(var i=0;i<lib.length;i++){
-      var it=lib[i];if(it.dur)continue;
+      var it=lib[i];if(it.dur||it.remote)continue;
       await new Promise(function(r){
         var a=new Audio();a.preload='metadata';
         var t=setTimeout(function(){a.src='';r();},4000);
@@ -497,7 +525,7 @@ function renderLib(){
   var items=visible();
   if(!items.length){box.innerHTML='<div class="empty-box"><p>Ничего не найдено</p></div>';return;}
   box.innerHTML=items.map(function(it){
-    return '<div class="row'+(it.id===curId?' on':'')+'" data-id="'+it.id+'"><button class="row-main" data-act="play" aria-label="Играть: '+esc(it.title)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+'</small></span><span class="dur" data-dur="'+it.id+'">'+(it.dur?fmt(it.dur):'')+'</span></button><button class="x" data-act="del" aria-label="Удалить из плеера">'+svg('close',18)+'</button></div>';
+    return '<div class="row'+(it.id===curId?' on':'')+'" data-id="'+it.id+'"><button class="row-main" data-act="play" aria-label="Играть: '+esc(it.title)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+(it.remote?' · онлайн':'')+'</small></span><span class="dur" data-dur="'+it.id+'">'+(it.dur?fmt(it.dur):'')+'</span></button><button class="x" data-act="del" aria-label="Удалить из плеера">'+svg('close',18)+'</button></div>';
   }).join('');
 }
 function renderSp(){
@@ -528,9 +556,10 @@ function markCurrent(){
 }
 function setTab(t){
   tab=t;
-  $('#tab-lib').setAttribute('aria-selected',t==='lib');$('#tab-sp').setAttribute('aria-selected',t==='sp');
-  $('#pane-lib').hidden=t!=='lib';$('#pane-sp').hidden=t!=='sp';
-  $('#pane-lib').style.display=t==='lib'?'grid':'none';$('#pane-sp').style.display=t==='sp'?'grid':'none';
+  ['lib','sp','web'].forEach(function(k){
+    $('#tab-'+k).setAttribute('aria-selected',k===t);
+    var pane=$('#pane-'+k);pane.hidden=k!==t;pane.style.display=k===t?'grid':'none';
+  });
 }
 
 /* ---------- воспроизведение ---------- */
@@ -573,6 +602,7 @@ function toggle(){
   if(audio.paused){var p=audio.play();if(p&&p.catch)p.catch(function(){});}else audio.pause();
 }
 function setPlaying(on){
+  nativeSync();
   document.body.classList.toggle('playing',on);
   var ic=on?'pause':'play';
   $('#b-play').innerHTML=svg(ic,30);$('#b-play').setAttribute('aria-label',on?'Пауза':'Играть');
@@ -580,6 +610,7 @@ function setPlaying(on){
   if('mediaSession' in navigator){try{navigator.mediaSession.playbackState=on?'playing':'paused';}catch(e){}}
 }
 function updateNow(){
+  nativeSync();
   var it=curId?byId(curId):null,cv=$('#cover');
   if(!it){
     cv.className='cover empty';cv.removeAttribute('style');cv.innerHTML=svg('note',72);
@@ -653,6 +684,7 @@ $('#b-repeat').onclick=function(){
 };
 $('#tab-lib').onclick=function(){setTab('lib');};
 $('#tab-sp').onclick=function(){setTab('sp');};
+$('#tab-web').onclick=function(){setTab('web');};
 $('#q').addEventListener('input',function(e){filter=e.target.value;renderLib();markCurrent();});
 $('#btn-add').onclick=function(){$('#f-audio').click();};
 $('#btn-folder').onclick=function(){$('#f-folder').click();};
@@ -718,6 +750,132 @@ document.addEventListener('keydown',function(e){
   if(e.code==='Space'){e.preventDefault();toggle();}
   else if(e.code==='ArrowRight'&&curId){audio.currentTime=Math.min((audio.duration||0),audio.currentTime+5);}
   else if(e.code==='ArrowLeft'&&curId){audio.currentTime=Math.max(0,audio.currentTime-5);}
+});
+
+/* ---------- кнопки уведомления ---------- */
+if(Native){
+  try{Native.addListener('action',function(e){
+    var a=e&&e.action;
+    if(a==='toggle')toggle();else if(a==='next')next(false);else if(a==='prev')prev();
+    else if(a==='stop'){audio.pause();Native.stop().catch(function(){});nativeOn=false;}
+  });}catch(e){}
+}
+
+/* ---------- поиск в Internet Archive ---------- */
+var IA='https://archive.org',webItems={};
+function webStatus(t){$('#web-status').textContent=t;}
+var AU='https://api.audius.co/v1',AU_APP='Dorozhka',auTracks={};
+async function audiusSearch(q){
+  var r=await fetch(AU+'/tracks/search?query='+encodeURIComponent(q)+'&limit=20&app_name='+AU_APP);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return ((await r.json()).data)||[];
+}
+async function iaSearch(q){
+  var url=IA+'/advancedsearch.php?q='+encodeURIComponent('('+q+') AND mediatype:audio')+'&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=15&sort%5B%5D=downloads+desc&output=json';
+  var r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
+  return ((await r.json()).response||{}).docs||[];
+}
+function auRec(t){
+  var art=t.artwork||{};
+  return {id:'au'+t.id,name:'audius:'+t.id,size:0,title:t.title||'Без названия',artist:(t.user&&t.user.name)||'',album:'',blob:null,cover:null,
+    remoteUrl:AU+'/tracks/'+t.id+'/stream?app_name='+AU_APP,coverRemote:art['480x480']||art['150x150']||'',dur:t.duration||0};
+}
+async function addRemote(t){
+  var rec=auRec(t);
+  if(!byId(rec.id)){
+    lib.push(mk(rec));
+    await idb('files','readwrite',function(s){return s.put(rec);});
+    libVer++;mcache.clear();renderAll();
+  }
+  return rec.id;
+}
+function renderAudius(list){
+  list.forEach(function(t){auTracks[t.id]=t;});
+  $('#web-au').innerHTML='<h4 class="sec">Слушать онлайн (Audius)</h4>'+list.map(function(t){
+    var r=auRec(t);
+    return '<div class="row" data-au="'+esc(t.id)+'"><button class="row-main" data-act="auplay" aria-label="Играть: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">'+(r.dur?fmt(r.dur):'')+'</span></button><button class="x" data-act="auadd" aria-label="Добавить в библиотеку">'+svg('plus',18)+'</button></div>';
+  }).join('');
+}
+function renderIA(docs){
+  docs.forEach(function(d){webItems[d.identifier]=d;});
+  $('#web-res').innerHTML='<h4 class="sec">Скачать свободную музыку (Internet Archive)</h4>'+docs.map(function(d){
+    var cr=Array.isArray(d.creator)?d.creator.join(', '):(d.creator||'');
+    return '<article class="pl" data-id="'+esc(d.identifier)+'"><div class="pl-head"><h4>'+esc(d.title||d.identifier)+'</h4></div><div class="hint">'+esc(cr||'Автор не указан')+'</div><div class="acts"><button class="btn small" data-act="files">Показать треки</button></div><div class="wfiles"></div></article>';
+  }).join('');
+}
+async function webSearch(q){
+  webStatus('Ищу…');$('#web-res').innerHTML='';$('#web-au').innerHTML='';
+  var res=await Promise.allSettled([audiusSearch(q),iaSearch(q)]);
+  var a=res[0],b=res[1],na=0,nb=0;
+  if(a.status==='fulfilled'&&a.value.length){na=a.value.length;renderAudius(a.value);}
+  if(b.status==='fulfilled'&&b.value.length){nb=b.value.length;renderIA(b.value);}
+  if(na||nb)webStatus('');
+  else if(a.status==='rejected'&&b.status==='rejected')webStatus('Не удалось выполнить поиск. Проверьте интернет и повторите.');
+  else webStatus('Ничего не найдено. Попробуйте другое слово.');
+}
+function fileMeta(d,f){
+  var base=(f.name||'').split('/').pop().replace(/\.[^.]+$/,'');
+  var cr=Array.isArray(d.creator)?d.creator[0]:(d.creator||'');
+  return {title:f.title||base,artist:f.creator||cr||''};
+}
+async function webFiles(card){
+  var id=card.dataset.id,box=card.querySelector('.wfiles'),btn=card.querySelector('[data-act=files]');
+  if(box.dataset.loaded){box.hidden=!box.hidden;btn.textContent=box.hidden?'Показать треки':'Скрыть треки';return;}
+  btn.disabled=true;btn.textContent='Загружаю список…';
+  try{
+    var r=await fetch(IA+'/metadata/'+encodeURIComponent(id));if(!r.ok)throw new Error('HTTP '+r.status);
+    var j=await r.json();
+    var files=(j.files||[]).filter(function(f){return /\.mp3$/i.test(f.name||'');}).sort(function(a,b){return String(a.name).localeCompare(String(b.name),'ru',{numeric:true});}).slice(0,60);
+    var d=webItems[id]||{};
+    if(!files.length){box.innerHTML='<p class="hint">В этой записи нет mp3-файлов.</p>';}
+    else{
+      box.dataset.loaded='1';
+      box._files=files;
+      box.innerHTML='<div class="acts" style="margin:6px 0"><button class="btn small primary" data-act="addall">Добавить всё ('+files.length+')</button></div>'+files.map(function(f,i){
+        var m=fileMeta(d,f);
+        return '<div class="frow"><span class="rt"><b>'+esc(m.title)+'</b><small>'+esc(m.artist)+'</small></span><button class="btn small" data-act="addone" data-i="'+i+'">Добавить</button></div>';
+      }).join('');
+    }
+    box.hidden=false;box.dataset.loaded='1';btn.textContent='Скрыть треки';
+  }catch(e){btn.textContent='Показать треки';toast('Не удалось получить список треков');}
+  btn.disabled=false;
+}
+async function webAdd(card,i,btn){
+  var id=card.dataset.id,box=card.querySelector('.wfiles'),f=box._files[i],d=webItems[id]||{};
+  btn.disabled=true;btn.textContent='Загрузка…';
+  try{
+    var r=await fetch(IA+'/download/'+encodeURIComponent(id)+'/'+f.name.split('/').map(encodeURIComponent).join('/'));
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var blob=await r.blob();
+    var file=new File([blob],id+' - '+f.name.split('/').pop(),{type:'audio/mpeg'});
+    file._meta=fileMeta(d,f);
+    await addFiles([file]);
+    btn.textContent='Добавлено';return true;
+  }catch(e){btn.disabled=false;btn.textContent='Повторить';toast('Не удалось скачать трек');return false;}
+}
+$('#web-form').addEventListener('submit',function(e){e.preventDefault();var q=$('#web-q').value.trim();if(q)webSearch(q);});
+$('#web-au').addEventListener('click',async function(e){
+  var btn=e.target.closest('[data-act]');if(!btn)return;
+  var row=btn.closest('.row');var t=row&&auTracks[row.dataset.au];if(!t)return;
+  if(btn.dataset.act==='auplay'){
+    var id=await addRemote(t);
+    playIds(sorted().map(function(x){return x.id;}),id);
+  }else if(btn.dataset.act==='auadd'){
+    await addRemote(t);btn.innerHTML=svg('close',18).replace('<path','<path transform="rotate(45 12 12)"');btn.disabled=true;toast('Добавлено в «Файлы»');
+  }
+});
+$('#web-res').addEventListener('click',async function(e){
+  var btn=e.target.closest('[data-act]');if(!btn)return;
+  var card=btn.closest('.pl');if(!card)return;
+  var act=btn.dataset.act;
+  if(act==='files')webFiles(card);
+  else if(act==='addone')webAdd(card,+btn.dataset.i,btn);
+  else if(act==='addall'){
+    btn.disabled=true;
+    var rows=card.querySelectorAll('[data-act=addone]');
+    for(var k=0;k<rows.length;k++){if(rows[k].disabled)continue;btn.textContent='Добавляю '+(k+1)+' из '+rows.length+'…';await webAdd(card,+rows[k].dataset.i,rows[k]);}
+    btn.textContent='Готово';
+  }
 });
 
 /* ---------- запуск ---------- */
