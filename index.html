@@ -221,6 +221,45 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .external-search .btn{flex:none}
 @media(max-width:560px){.source-switch{grid-template-columns:repeat(2,minmax(0,1fr))}.video-results{grid-template-columns:1fr}.video-card{display:grid;grid-template-columns:112px minmax(0,1fr)}.video-card img{height:100%;aspect-ratio:auto}.video-card-body{align-content:center}.brand:after{display:none}}
 @media(prefers-reduced-motion:reduce){.btn,.source-chip,.row{transition:none}}
+
+/* Единый поиск и компактная панель источников */
+#pane-web .source-switch,#pane-web > .source-panel{display:none!important}
+.global-search{display:grid;gap:17px;min-width:0}
+.global-heading{padding:23px 22px 5px;display:grid;gap:7px}
+.global-heading>span{font:600 10px var(--f-mono);letter-spacing:.18em;color:var(--accent)}
+.global-heading h3{margin:0;font:600 clamp(24px,4vw,32px) var(--f-display);letter-spacing:-.045em}
+.global-heading p{margin:0;max-width:58ch;color:var(--muted);font-size:13px}
+.global-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;padding:0 4px}
+.global-form .search{min-height:54px;border-radius:14px;font-size:16px;padding-inline:16px}
+.global-form .btn{min-width:104px;justify-content:center}
+.global-search>.status{padding:0 5px;min-height:18px}
+.global-settings{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.025);border-radius:14px;padding:13px 15px}
+.global-settings summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600}
+#global-key-settings{display:grid;gap:12px;margin-top:13px}
+#global-key-settings .source-settings,#global-key-settings .how{display:grid}
+#global-key-settings .how{padding:14px}
+#global-key-settings .source-settings{padding:12px}
+.global-results{display:grid;gap:22px}
+.global-result-group{display:grid;gap:10px;min-width:0}
+.global-result-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 4px}
+.global-result-title h4{margin:0;font:600 15px var(--f-display);letter-spacing:-.02em}
+.global-result-title span{color:var(--muted);font-size:11px}
+#global-yt-slot,#global-free-slot{display:grid;gap:10px;min-width:0}
+#global-yt-slot .status,#global-free-slot .status{min-height:0}
+#global-yt-slot .video-results{grid-template-columns:repeat(2,minmax(0,1fr))}
+#global-free-slot #web-res{display:grid;gap:10px}
+#global-free-slot #web-au{display:grid;gap:3px}
+#yt-open-search{display:none!important}
+#yt-form,#web-form{display:none!important}
+@media(max-width:560px){
+ .global-heading{padding:17px 5px 2px}
+ .global-form{grid-template-columns:minmax(0,1fr) auto;padding:0}
+ .global-form .btn{min-width:78px;padding-inline:12px}
+ #global-yt-slot .video-results{grid-template-columns:1fr}
+ .global-result-title{align-items:flex-start;flex-direction:column;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){.global-form .btn{transition:none}}
+
 </style>
 </head>
 <body>
@@ -286,6 +325,22 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
       </div>
 
       <div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
+        <section class="global-search">
+          <div class="global-heading"><span>ЕДИНЫЙ ПОИСК</span><h3>Найти музыку</h3><p>Один запрос одновременно ищет видео на YouTube и свободную музыку в Jamendo и Internet Archive.</p></div>
+          <form class="global-form" id="global-form">
+            <input class="search" id="global-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск по всем источникам" autocomplete="off">
+            <button class="btn primary" type="submit">Найти</button>
+          </form>
+          <div id="global-status" class="status" aria-live="polite">Введите название трека или исполнителя.</div>
+          <details class="global-settings">
+            <summary>Настройки источников и API</summary>
+            <div id="global-key-settings"></div>
+          </details>
+          <div class="global-results">
+            <section class="global-result-group"><div class="global-result-title"><h4>YouTube</h4><span>через YouTube Data API</span></div><div id="global-yt-slot"></div></section>
+            <section class="global-result-group"><div class="global-result-title"><h4>Свободная музыка</h4><span>Jamendo · Internet Archive</span></div><div id="global-free-slot"></div></section>
+          </div>
+        </section>
         <div class="source-switch" role="group" aria-label="Источники музыки">
           <button class="source-chip" type="button" data-source="youtube" aria-pressed="true">YouTube</button>
           <button class="source-chip" type="button" data-source="yandex" aria-pressed="false">Яндекс Музыка</button>
@@ -298,11 +353,11 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
           <button class="source-chip" type="button" data-source="vk" aria-pressed="false">VK Музыка</button>
         </div>
         <section class="source-panel" id="source-youtube">
-          <div class="source-intro"><h3>YouTube</h3><p>Поиск клипов и музыкальных видео. Воспроизведение идёт через официальный YouTube-плеер — без скачивания и обхода ограничений платформы.</p></div>
+          <div class="source-intro"><h3>YouTube</h3><p>YouTube автоматически ищется вместе с остальными источниками, если сохранён API key. Видео воспроизводятся через официальный плеер.</p></div>
           <form class="source-form" id="yt-form"><input class="search" id="yt-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск на YouTube"><button class="btn primary" type="submit">Найти</button></form>
           <details class="source-settings" id="yt-settings"><summary>Настроить поиск YouTube (API key)</summary>
             <form class="source-form" id="yt-key-form"><input class="search" id="yt-key-in" type="password" autocomplete="off" placeholder="YouTube Data API key" aria-label="Ключ YouTube API"><button class="btn" type="submit">Сохранить</button></form>
-            <p class="hint">Ключ хранится только на этом устройстве. Создаётся в Google Cloud Console для YouTube Data API v3.</p>
+            <p class="hint">Ключ хранится локально на этом устройстве. После сохранения YouTube автоматически участвует в каждом общем поиске через YouTube Data API v3.</p>
           </details>
           <div id="yt-status" class="status" aria-live="polite">Для поиска добавьте API key. Можно также открыть поиск YouTube в браузере.</div>
           <div id="yt-player" class="video-player" hidden></div>
@@ -349,7 +404,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
           <input class="search" id="web-q" type="search" placeholder="Исполнитель или название" aria-label="Поиск в интернете">
           <button class="btn primary" type="submit">Найти</button>
         </form>
-        <p class="hint">Jamendo и Internet Archive играют онлайн, ничего не скачивается: нажмите на трек, он добавится в «Файлы» и запустится. Это свободная музыка, популярных хитов из Spotify здесь нет.</p>
+        <p class="hint">Jamendo и Internet Archive ищутся параллельно с YouTube. Доступные аудиофайлы можно добавить в «Файлы» и воспроизводить онлайн.</p>
         <div class="how" id="jam-key">
           <h3>Нужен бесплатный ключ Jamendo</h3>
           <ol class="steps">
@@ -1070,6 +1125,29 @@ $('#web-res').addEventListener('click',async function(e){
   }
 });
 showKey();
+/* Переносим существующие блоки поиска в единый экран, не дублируя обработчики и ключи. */
+$('#global-key-settings').appendChild($('#yt-settings'));
+$('#global-key-settings').appendChild($('#jam-key'));
+$('#global-key-settings').appendChild($('#key-reset'));
+$('#global-yt-slot').appendChild($('#yt-status'));
+$('#global-yt-slot').appendChild($('#yt-player'));
+$('#global-yt-slot').appendChild($('#yt-results'));
+$('#global-free-slot').appendChild($('#web-status'));
+$('#global-free-slot').appendChild($('#web-au'));
+$('#global-free-slot').appendChild($('#web-res'));
+$('#yt-open-search').hidden=true;
+$('#global-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var q=$('#global-q').value.trim();if(!q)return;
+  $('#global-status').textContent='Ищу одновременно в доступных источниках…';
+  $('#yt-results').innerHTML='';$('#web-au').innerHTML='';$('#web-res').innerHTML='';
+  await Promise.allSettled([youtubeSearch(q),webSearch(q)]);
+  var yt=$('#yt-status').textContent,free=$('#web-status').textContent;
+  var notes=[];
+  if(yt)notes.push('YouTube: '+yt);
+  if(free)notes.push(free);
+  $('#global-status').textContent=notes.join(' · ');
+});
 
 /* ---------- дополнительные источники ---------- */
 var ytKey=ls.get('youtubeApiKey','');
@@ -1079,7 +1157,7 @@ if(ytKey){$('#yt-key-in').value=ytKey;$('#yt-status').textContent='Ключ YouT
 function ytStatus(t){$('#yt-status').textContent=t;}
 function openSearch(url){var w=window.open(url,'_blank','noopener');if(!w)toast('Разрешите открытие всплывающих окон для перехода к источнику.');}
 async function youtubeSearch(q){
-  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан. Открываю официальный поиск YouTube. Для результатов внутри приложения добавьте ключ YouTube Data API v3.');openSearch('https://www.youtube.com/results?search_query='+encodeURIComponent(q));return;}
+  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан — YouTube пропущен. Добавьте ключ в «Настройки источников и API», чтобы включить поиск в фоне.');return;}
   ytStatus('Ищу на YouTube…');$('#yt-results').innerHTML='';$('#yt-player').hidden=true;$('#yt-player').innerHTML='';
   try{
     var u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&safeSearch=moderate&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(ytKey);
