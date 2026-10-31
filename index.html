@@ -1386,10 +1386,10 @@ $('.player').appendChild(playerClose);
 playerClose.addEventListener('click',function(){document.body.classList.remove('player-expanded');});
 
 function setSource(name){
-  ['youtube','yandex','soundcloud','free','spotify','apple','deezer','bandcamp','vk'].forEach(function(k){
+  ['youtube','yandex','soundcloud','free','apple','deezer','bandcamp','vk'].forEach(function(k){
     var panel=$('#source-'+k),button=document.querySelector('[data-source="'+k+'"]');
-    panel.hidden=k!==name;
-    button.setAttribute('aria-pressed',k===name?'true':'false');
+    if(panel)panel.hidden=k!==name;
+    if(button)button.setAttribute('aria-pressed',k===name?'true':'false');
   });
 }
 document.querySelectorAll('[data-source]').forEach(function(b){b.addEventListener('click',function(){setSource(b.dataset.source);});});
@@ -1397,7 +1397,7 @@ $('#q').addEventListener('input',function(e){filter=e.target.value;renderLib();m
 $('#btn-add').onclick=startAdd;
 $('#library-add-cta').addEventListener('click',function(){startAdd();});
 $('#btn-folder').onclick=function(){$('#f-folder').click();};
-$('#btn-list').onclick=function(){$('#f-list').click();};
+
 function pick(sel,fn){$(sel).addEventListener('change',function(e){var fl=Array.prototype.slice.call(e.target.files);e.target.value='';if(fl.length)fn(fl);});}
 pick('#f-audio',addFiles);pick('#f-folder',addFiles);pick('#f-list',importLists);
 
@@ -1868,7 +1868,7 @@ function bindCatalogSearch(formId,inputId,linkId,makeUrl){
     var url=makeUrl(q);$('#'+linkId).href=url;openSearch(url);
   });
 }
-bindCatalogSearch('spotify-form','spotify-q','spotify-open',function(q){return 'https://open.spotify.com/search/'+encodeURIComponent(q);});
+
 bindCatalogSearch('apple-form','apple-q','apple-open',function(q){return 'https://music.apple.com/search?term='+encodeURIComponent(q);});
 bindCatalogSearch('deezer-form','deezer-q','deezer-open',function(q){return 'https://www.deezer.com/search/'+encodeURIComponent(q);});
 bindCatalogSearch('bandcamp-form','bandcamp-q','bandcamp-open',function(q){return 'https://bandcamp.com/search?q='+encodeURIComponent(q);});
