@@ -1299,7 +1299,7 @@ function renderLib(){
 function recordHistory(id){
   if(!id)return;
   history=[id].concat(history.filter(function(x){return x!==id;})).slice(0,80);
-  ls.set('history',history);savePlaybackState();renderHomeShelves();
+  ls.set('history',history);renderHomeShelves();
 }
 function toggleFavorite(id){
   if(favorites.has(id))favorites.delete(id);else favorites.add(id);
@@ -1455,7 +1455,7 @@ function load(id){
   if(it.provider){
     if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
     stopExternalPoll();var requestSeq=++externalSeq;externalProvider=it.provider;externalEnded=false;externalPos=0;externalDur=it.dur||0;
-    audio.pause();updateNow();markCurrent();setMedia(it);setPlaying(false);
+    audio.pause();updateNow();markCurrent();setMedia(it);setPlaying(false);savePlaybackState();
     window.DorozhkaMajorCatalogs.setVolume(it.provider,+$('#vol').value).catch(function(){});
     window.DorozhkaMajorCatalogs.play(it.provider,it.providerTrackId).then(function(){
       if(externalSeq===requestSeq&&externalProvider===it.provider&&curId===id){setPlaying(true);startExternalPoll();}
@@ -1473,7 +1473,7 @@ function load(id){
       sendNativeQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0},nativeLoadSeq);
     });
   }else{audio.src=it.url;var p=audio.play();if(p&&p.catch)p.catch(function(){});}
-  updateNow();markCurrent();setMedia(it);
+  updateNow();markCurrent();setMedia(it);savePlaybackState();
 }
 function next(auto){
   if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
@@ -1961,7 +1961,7 @@ $('#home-queue').addEventListener('click',function(e){
   var id=b.dataset.id;if(byId(id))playIds(order.length?order:baseList,id);
 });
 $('#queue-clear').addEventListener('click',function(){
-  if(curId&&Native&&nativeLive){baseList=[curId];order=[curId];pos=0;nativeQueue(true);}
+  if(curId){baseList=[curId];order=[curId];pos=0;if(Native&&nativeLive)nativeQueue(true);}
   else{baseList=[];order=[];pos=-1;}
   savePlaybackState();renderHomeShelves();toast('Очередь очищена');
 });
