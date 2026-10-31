@@ -59,6 +59,7 @@ def connect():
 
 def track_json(row):
     item = dict(row)
+    item.pop("filename", None)
     item["stream_url"] = f"/api/v1/tracks/{item['id']}/stream"
     return item
 
@@ -153,6 +154,8 @@ def stream_track(track_id: str, range_header: Optional[str] = Header(None, alias
             raise HTTPException(416, "Range not satisfiable", headers={"Content-Range": f"bytes */{size}"})
         status = 206
         headers["Content-Range"] = f"bytes {start}-{end}/{size}"
+    if size <= 0:
+        raise HTTPException(404, "Audio file is empty")
     length = end - start + 1
     headers["Content-Length"] = str(length)
 
