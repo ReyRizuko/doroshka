@@ -978,10 +978,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         queue.clear();
         index = -1;
         wantPlay = false;
-        try {
-            audio.abandonAudioFocus(this);
-        } catch (Exception ignored) {
-        }
+        abandonFocus();
+        pausedByFocus = false;
         releaseWifiLock();
         try {
             stopForeground(true);
