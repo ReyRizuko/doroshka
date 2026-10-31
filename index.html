@@ -1425,7 +1425,7 @@ audio.addEventListener('error',function(){
   else setPlaying(false);
 });
 var sk=$('#seek');
-sk.addEventListener('input',function(){seeking=true;sk.style.setProperty('--p',(sk.value/10)+'%');var d=isFinite(audio.duration)?audio.duration:0;$('#t-cur').textContent=fmt(d*sk.value/1000);});
+sk.addEventListener('input',function(){seeking=true;sk.style.setProperty('--p',(sk.value/10)+'%');var d=externalProvider?externalDur:(isFinite(audio.duration)?audio.duration:0);$('#t-cur').textContent=fmt(d*sk.value/1000);});
 sk.addEventListener('change',function(){var d=externalProvider?externalDur:(isFinite(audio.duration)?audio.duration:0);if(d){var target=d*sk.value/1000;if(externalProvider){externalEnded=false;window.DorozhkaMajorCatalogs.seek(externalProvider,target).then(startExternalPoll).catch(function(err){toast(err.message||'Перемотка недоступна');});}else audio.currentTime=target;}seeking=false;});
 var vol=$('#vol');
 var rememberVolume=ls.get('rememberVolume',true);
