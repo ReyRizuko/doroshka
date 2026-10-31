@@ -64,7 +64,7 @@ for (const token of ['function queueMajorTrack', 'function syncExternalState', '
 }
 for (const token of ['function play(provider,id)', 'function pause(provider)', 'function resume(provider)',
   'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)',
-  'function waitForSpotifyDevice()', 'spotifyReadyWaiters', 'function refreshSpotifyToken()', 'function ensureSpotifyToken()', 'spotifyAuthGeneration', 'generation!==spotifyAuthGeneration', 'dorozhkaSpotifyRefreshToken', "addListener('ready'", "addListener('player_state_changed'"]) {
+  'function waitForSpotifyDevice()', 'spotifyReadyWaiters', 'function refreshSpotifyToken()', 'function ensureSpotifyToken()', 'function hasSpotifySession()', 'spotifyAuthGeneration', 'generation!==spotifyAuthGeneration', 'dorozhkaSpotifyRefreshToken', "addListener('ready'", "addListener('player_state_changed'"]) {
   if (!majorCatalogSource.includes(token)) {
     throw new Error('Major catalog playback API is missing: ' + token);
   }
