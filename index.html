@@ -996,8 +996,10 @@ function readTags(f){
 }
 function mk(r){
   var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl,uri:r.uri||''};
-  it.url=r.remoteUrl||r.uri||URL.createObjectURL(r.blob);
-  it.coverUrl=(r.remoteUrl||r.uri)?(r.coverRemote||''):(r.cover?URL.createObjectURL(r.cover):'');
+  it.provider=r.provider||'';
+  it.providerTrackId=r.providerTrackId||'';
+  it.url=r.remoteUrl||r.uri||(r.blob?URL.createObjectURL(r.blob):'');
+  it.coverUrl=(r.remoteUrl||r.uri||it.provider)?(r.coverRemote||''):(r.cover?URL.createObjectURL(r.cover):'');
   it.dur=durs[r.id]||r.dur||0;
   it.nTitle=normTitle(it.title);
   it.nArtist=' '+norm(it.artist)+' ';
@@ -1243,6 +1245,10 @@ function playIds(ids,startId){
   if(!ids.length)return;
   baseList=ids.slice();errRun=0;
   buildOrder(startId||ids[0]);
+  if(Native&&order.some(function(id){var it=byId(id);return it&&it.provider;})){
+    toast('Смешанная очередь с Apple Music/Spotify пока доступна в веб-версии. Android-движок этих сервисов ещё не подключён.');
+    return;
+  }
   if(Native){nativeQueue(false);curId=order[pos];updateNow();markCurrent();return;}
   load(order[pos]);
 }
@@ -1285,37 +1291,65 @@ function nativeQueue(keep){
     if(seq===nativeQueueSeq){nativeLive=true;nCall(Native.setQueue({items:ids.map(nItem).filter(Boolean),index:Math.max(0,pos),keep:!!keep,repeat:repeat}));}
   });
 }
+var externalProvider='',externalPos=0,externalDur=0,externalPoll=null,externalSeq=0;
+function stopExternalPoll(){if(externalPoll){clearInterval(externalPoll);externalPoll=null;}}
+function syncExternalState(){
+  if(!externalProvider)return;
+  var provider=externalProvider,seq=externalSeq;
+  window.DorozhkaMajorCatalogs.getState(provider).then(function(state){
+    if(seq!==externalSeq||provider!==externalProvider)return;
+    externalPos=state.currentTime||0;externalDur=state.duration||0;
+    setPlaying(!!state.playing);updateTime();
+    if(externalDur>0&&externalPos>=externalDur-0.35&&!state.playing)next(true);
+  }).catch(function(){});
+}
+function startExternalPoll(){stopExternalPoll();externalPoll=setInterval(syncExternalState,700);syncExternalState();}
 function load(id){
   var it=byId(id);if(!it)return;
   curId=id;
-  audio.src=it.url;
-  var p=audio.play();if(p&&p.catch)p.catch(function(){});
+  if(it.provider){
+    if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
+    stopExternalPoll();externalSeq++;externalProvider=it.provider;externalPos=0;externalDur=it.dur||0;
+    audio.pause();updateNow();markCurrent();setMedia(it);setPlaying(false);
+    window.DorozhkaMajorCatalogs.play(it.provider,it.providerTrackId).then(function(){
+      if(externalProvider===it.provider){setPlaying(true);startExternalPoll();}
+    }).catch(function(err){
+      if(externalProvider===it.provider){externalProvider='';stopExternalPoll();setPlaying(false);toast(err&&err.message||('Не удалось запустить '+it.provider));}
+    });
+    return;
+  }
+  externalSeq++;externalProvider='';stopExternalPoll();
+  if(Native){
+    audio.pause();
+    nativeArtwork(it).then(function(art){nativeLive=true;nCall(Native.setQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0}));});
+  }else{audio.src=it.url;var p=audio.play();if(p&&p.catch)p.catch(function(){});}
   updateNow();markCurrent();setMedia(it);
 }
 function next(auto){
-  if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
   if(!order.length)return;
-  if(auto&&repeat===2){audio.currentTime=0;audio.play();return;}
+  if(auto&&repeat===2){
+    if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});
+    else if(Native)nCall(Native.seek({ms:0}));
+    else{audio.currentTime=0;audio.play();}
+    return;
+  }
   var p=pos+1;
   if(p>=order.length){
     if(repeat===1||!auto)p=0;
-    else{audio.pause();audio.currentTime=0;setPlaying(false);return;}
+    else{if(externalProvider)window.DorozhkaMajorCatalogs.pause(externalProvider).catch(function(){});else if(Native)nCall(Native.pause());else audio.pause();setPlaying(false);return;}
   }
   pos=p;load(order[pos]);
 }
 function prev(){
-  if(Native){if(nativeLive)nCall(Native.prev());return;}
   if(!order.length)return;
-  if(audio.currentTime>3){audio.currentTime=0;return;}
+  var current=externalProvider?externalPos:(Native?nState.pos/1000:audio.currentTime);
+  if(current>3){if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});else if(Native)nCall(Native.seek({ms:0}));else audio.currentTime=0;return;}
   pos=(pos-1+order.length)%order.length;load(order[pos]);
 }
 function toggle(){
   if(!curId){var v=visible();if(v.length)playIds(v.map(function(x){return x.id;}),v[0].id);return;}
-  if(Native){
-    if(!nativeLive){var ids=baseList.length?baseList.slice():sorted().map(function(x){return x.id;});playIds(ids,curId);}
-    else nCall(Native.toggle());
-    return;
-  }
+  if(externalProvider){var action=document.body.classList.contains('playing')?'pause':'resume';window.DorozhkaMajorCatalogs[action](externalProvider).then(function(){setPlaying(action==='resume');syncExternalState();}).catch(function(err){toast(err.message||'Ошибка управления воспроизведением');});return;}
+  if(Native){if(!nativeLive){var ids=baseList.length?baseList.slice():sorted().map(function(x){return x.id;});playIds(ids,curId);}else nCall(Native.toggle());return;}
   if(audio.paused){var p=audio.play();if(p&&p.catch)p.catch(function(){});}else audio.pause();
 }
 function setPlaying(on){
@@ -1340,7 +1374,7 @@ function updateNow(){
   document.title='Дорожка · '+it.title;
 }
 function updateTime(){
-  var cur=audio.currentTime||0,dur=isFinite(audio.duration)?audio.duration:0;
+  var cur=externalProvider?externalPos:(audio.currentTime||0),dur=externalProvider?externalDur:(isFinite(audio.duration)?audio.duration:0);
   $('#t-cur').textContent=fmt(cur);$('#t-dur').textContent=fmt(dur);
   if(!seeking){var v=dur?cur/dur*1000:0;var s=$('#seek');s.value=v;s.style.setProperty('--p',(v/10)+'%');}
   $('#mini').style.setProperty('--w',(dur?cur/dur*100:0)+'%');
@@ -1380,11 +1414,11 @@ audio.addEventListener('error',function(){
 });
 var sk=$('#seek');
 sk.addEventListener('input',function(){seeking=true;sk.style.setProperty('--p',(sk.value/10)+'%');var d=isFinite(audio.duration)?audio.duration:0;$('#t-cur').textContent=fmt(d*sk.value/1000);});
-sk.addEventListener('change',function(){var d=isFinite(audio.duration)?audio.duration:0;if(d)audio.currentTime=d*sk.value/1000;seeking=false;});
+sk.addEventListener('change',function(){var d=externalProvider?externalDur:(isFinite(audio.duration)?audio.duration:0);if(d){var target=d*sk.value/1000;if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,target).catch(function(err){toast(err.message||'Перемотка недоступна');});else audio.currentTime=target;}seeking=false;});
 var vol=$('#vol');
 var rememberVolume=ls.get('rememberVolume',true);
 $('#remember-volume').checked=rememberVolume;
-vol.addEventListener('input',function(){audio.volume=+vol.value;vol.style.setProperty('--p',(vol.value*100)+'%');if($('#remember-volume').checked)ls.set('vol',+vol.value);});
+vol.addEventListener('input',function(){if(externalProvider)window.DorozhkaMajorCatalogs.setVolume(externalProvider,+vol.value).catch(function(){});else audio.volume=+vol.value;vol.style.setProperty('--p',(vol.value*100)+'%');if($('#remember-volume').checked)ls.set('vol',+vol.value);});
 $('#remember-volume').addEventListener('change',function(){ls.set('rememberVolume',this.checked);if(!this.checked){try{localStorage.removeItem('vol');}catch(e){}}else ls.set('vol',+vol.value);});
 $('#b-play').onclick=toggle;$('#m-play').onclick=toggle;
 $('#b-next').onclick=function(){next(false);};$('#m-next').onclick=function(){next(false);};
@@ -1701,10 +1735,8 @@ function renderMajorCatalog(slotId,list,provider){
   if(!list.length){slot.innerHTML='<div class="status">В '+empty+' ничего не найдено.</div>';return;}
   slot.innerHTML=list.map(function(t){
     var attr=provider==='Apple Music'?'data-apple-track':'data-spotify-track';
-    var act=provider==='Apple Music'?'apple-play':'spotify-play';
     var details=[t.creator||'Исполнитель не указан',t.album||provider].join(' · ');
-    var open=t.url?'<a class="x" href="'+esc(t.url)+'" target="_blank" rel="noopener" aria-label="Открыть в '+provider+'">↗</a>':'';
-    return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="'+act+'" aria-label="Воспроизвести: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+open+'</div>';
+    return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="major-queue" data-provider="'+esc(provider)+'" aria-label="Добавить в очередь и воспроизвести: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
   }).join('');
 }
 async function runGlobalSearch(q){
@@ -1753,19 +1785,21 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
   var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
   playIds(sorted().map(function(x){return x.id;}),id);
 });
-$('#global-apple-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act=apple-play]');if(!b)return;
-  var row=b.closest('[data-apple-track]');if(!row)return;
-  var status=$('#apple-catalog-status');status.textContent='Запускаю Apple Music…';
-  try{await window.DorozhkaMajorCatalogs.playApple(row.dataset.appleTrack);status.textContent='Воспроизведение Apple Music запущено.';}
-  catch(err){status.textContent=err.message||'Не удалось запустить Apple Music.';}
-});
-$('#global-spotify-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act=spotify-play]');if(!b)return;
-  var row=b.closest('[data-spotify-track]');if(!row)return;
-  var status=$('#spotify-catalog-status');status.textContent='Запускаю Spotify…';
-  try{var result=await window.DorozhkaMajorCatalogs.playSpotify(row.dataset.spotifyTrack);status.textContent=result&&result.external?'Открыл официальный трек Spotify.':'Команда воспроизведения отправлена в Spotify.';}
-  catch(err){status.textContent=err.message||'Не удалось запустить Spotify.';}
+async function queueMajorTrack(provider,trackId){
+  var t=provider==='Apple Music'?window.DorozhkaMajorCatalogs.getApple(trackId):window.DorozhkaMajorCatalogs.getSpotify(trackId);
+  if(!t)return toast('Результат поиска устарел. Повтори поиск.');
+  var id=(provider==='Apple Music'?'am:':'sp:')+String(t.id);
+  await addRemoteRec({id:id,name:provider+':'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:'',coverRemote:t.thumbnail||'',dur:t.duration||0,provider:provider,providerTrackId:String(t.id)});
+  var ids=baseList.length?baseList.slice():[];
+  if(ids.indexOf(id)<0)ids.push(id);
+  playIds(ids,id);
+}
+['#global-apple-slot','#global-spotify-slot'].forEach(function(selector){
+  $(selector).addEventListener('click',function(e){
+    var b=e.target.closest('[data-act=major-queue]');if(!b)return;
+    var row=b.closest('[data-apple-track],[data-spotify-track]');if(!row)return;
+    queueMajorTrack(b.dataset.provider,row.dataset.appleTrack||row.dataset.spotifyTrack).catch(function(err){toast(err.message||'Не удалось добавить трек в очередь');});
+  });
 });
 
 
