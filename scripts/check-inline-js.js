@@ -106,7 +106,9 @@ const nativeGuards = [
   ['repeat-one reacquires audio focus', 'mp.seekTo(0);\n                startPlayback();'],
   ['completed track restarts on resume', 'if (completed) {\n                try { mp.seekTo(0); completed = false;'],
   ['foreground startup failure resets JS player', 'emitError("");\n            PlaybackPlugin.emit("stopped", new JSObject());'],
-  ['service teardown resets JS player', 'PlaybackPlugin.emit("stopped", new JSObject());\n        super.onDestroy();']
+  ['service teardown resets JS player', 'PlaybackPlugin.emit("stopped", new JSObject());\n        super.onDestroy();'],
+  ['Gradle Maven fallback injection', 'def add_maven_mirrors(path):'],
+  ['Maven Central mirror fallback', 'maven-central.storage-download.googleapis.com/maven2/']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
