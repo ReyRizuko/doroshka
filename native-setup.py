@@ -221,6 +221,7 @@ public class PlaybackPlugin extends Plugin {
     public void setQueue(PluginCall call) {
         askNotifications();
         PlaybackService.repeat = call.getInt("repeat", 0);
+        PlaybackService.prepareStart();
         Intent i = new Intent(getContext(), PlaybackService.class);
         i.setAction(PlaybackService.ACTION_CMD);
         i.putExtra("cmd", "queue");
@@ -230,6 +231,7 @@ public class PlaybackPlugin extends Plugin {
             else getContext().startService(i);
             call.resolve();
         } catch (Exception e) {
+            PlaybackService.cancelStart();
             call.reject(String.valueOf(e.getMessage()));
         }
     }
@@ -423,6 +425,9 @@ import org.json.JSONObject;
 /** Нативный плеер: очередь, воспроизведение и уведомление живут здесь, а не в WebView. */
 public class PlaybackService extends Service implements AudioManager.OnAudioFocusChangeListener {
     static PlaybackService instance;
+    private static final Object POST_LOCK = new Object();
+    private static final ArrayList<Runnable> pendingCommands = new ArrayList<>();
+    private static boolean startingService = false;
     static final String ACTION_CMD = "app.dorozhka.player.CMD";
     static volatile float volume = 1f;
     static volatile int repeat = 0; // 0 выкл, 1 все, 2 один
@@ -468,9 +473,28 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
     };
 
+    static void prepareStart() {
+        synchronized (POST_LOCK) {
+            if (instance == null) startingService = true;
+        }
+    }
+
+    static void cancelStart() {
+        synchronized (POST_LOCK) {
+            startingService = false;
+            pendingCommands.clear();
+        }
+    }
+
     static void post(Runnable r) {
-        PlaybackService s = instance;
-        if (s != null) s.handler.post(r);
+        synchronized (POST_LOCK) {
+            PlaybackService s = instance;
+            if (s != null) {
+                s.handler.post(r);
+            } else if (startingService) {
+                pendingCommands.add(r);
+            }
+        }
     }
 
     @Override
@@ -481,7 +505,12 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
+        synchronized (POST_LOCK) {
+            instance = this;
+            startingService = false;
+            for (Runnable command : pendingCommands) handler.post(command);
+            pendingCommands.clear();
+        }
         audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         session = new MediaSession(this, "Dorozhka");
         session.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
@@ -1208,7 +1237,11 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     @Override
     public void onDestroy() {
-        instance = null;
+        synchronized (POST_LOCK) {
+            if (instance == this) instance = null;
+            startingService = false;
+            pendingCommands.clear();
+        }
         handler.removeCallbacks(ticker);
         if (remoteArtwork != null) { remoteArtwork.recycle(); remoteArtwork = null; }
         try {
