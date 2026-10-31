@@ -2,7 +2,7 @@
 (function(root){
   'use strict';
   var appleToken='',spotifyClientId='',spotifyRedirect='',spotifyToken='',spotifyDevice='',spotifyPlayer=null;
-  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='',spotifyReadyWaiters=[],spotifyRefreshPromise=null;
+  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='',spotifyReadyWaiters=[],spotifyRefreshPromise=null,spotifyAuthGeneration=0;
   var APPLE_TOKEN_KEY='dorozhkaAppleDeveloperToken',SPOTIFY_ID_KEY='dorozhkaSpotifyClientId',SPOTIFY_REDIRECT_KEY='dorozhkaSpotifyRedirectUri';
   function read(key){try{return localStorage.getItem(key)||'';}catch(e){return '';}}
   function write(key,value){try{localStorage.setItem(key,value);}catch(e){throw new Error('Не удалось сохранить настройку на устройстве.');}}
@@ -50,6 +50,7 @@
       catch(e){throw new Error('Проверь Redirect URI.');}
     }
     if(nextId!==spotifyClientId||nextRedirect!==spotifyRedirect){
+      spotifyAuthGeneration++;spotifyRefreshPromise=null;
       spotifyToken='';spotifyDevice='';spotifyLastState=null;spotifyEndedTrack='';
       if(spotifyPlayer){try{spotifyPlayer.disconnect();}catch(e){}spotifyPlayer=null;}
       try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyRefreshToken','dorozhkaSpotifyVerifier','dorozhkaSpotifyState'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
@@ -119,13 +120,14 @@
   }
   function refreshSpotifyToken(){
     if(spotifyRefreshPromise)return spotifyRefreshPromise;
-    var refresh='';
+    var refresh='',generation=spotifyAuthGeneration;
     try{refresh=sessionStorage.getItem('dorozhkaSpotifyRefreshToken')||'';}catch(e){}
     if(!refresh||!spotifyClientId)return Promise.reject(new Error('Сессия Spotify истекла. Войди в Spotify ещё раз.'));
     var body=new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh,client_id:spotifyClientId});
-    spotifyRefreshPromise=fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
+    var request=fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
       .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error_description||j.error||'Spotify token refresh failed');return j;});})
       .then(function(j){
+        if(generation!==spotifyAuthGeneration)throw new Error('Настройки Spotify изменились. Повтори подключение.');
         spotifyToken=j.access_token||'';
         if(!spotifyToken)throw new Error('Spotify не вернул новый access token.');
         try{
@@ -136,14 +138,15 @@
         return spotifyToken;
       })
       .catch(function(error){
-        if(error&&/invalid_grant|invalid refresh token/i.test(error.message||'')){
+        if(generation===spotifyAuthGeneration&&error&&/invalid_grant|invalid refresh token/i.test(error.message||'')){
           try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyRefreshToken'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
           spotifyToken='';
         }
         throw error;
-      })
-      .then(function(value){spotifyRefreshPromise=null;return value;},function(error){spotifyRefreshPromise=null;throw error;});
-    return spotifyRefreshPromise;
+      });
+    spotifyRefreshPromise=request;
+    request.then(function(){if(spotifyRefreshPromise===request)spotifyRefreshPromise=null;},function(){if(spotifyRefreshPromise===request)spotifyRefreshPromise=null;});
+    return request;
   }
   function ensureSpotifyToken(){var current=token();return current?Promise.resolve(current):refreshSpotifyToken();}
   function spotifyRequest(url,options){
