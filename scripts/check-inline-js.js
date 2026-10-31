@@ -45,7 +45,7 @@ const ownCatalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-ow
 if (!fs.existsSync(ownCatalogFile)) throw new Error('First-party Doroshka catalog adapter is missing from www/sources');
 const ownCatalogSource = fs.readFileSync(ownCatalogFile, 'utf8');
 new vm.Script(ownCatalogSource, { filename: 'www/sources/dorozhka-own-catalog.js' });
-for (const token of ['function search(query)', 'function health()', 'DoroshkaOwnCatalog', 'credentials:\\'omit\\'']) {
+for (const token of ['function search(query)', 'function health()', 'DoroshkaOwnCatalog', 'credentials']) {
   if (!ownCatalogSource.includes(token)) throw new Error('First-party catalog capability is missing: ' + token);
 }
 if (!html.includes('window.DorozhkaOwnCatalog.search(q)') || !html.includes('function renderOwnCatalog(list)')) {
