@@ -1254,6 +1254,14 @@ function playIds(ids,startId){
 }
 function nItem(id){var it=byId(id);return it?{id:it.id,url:it.url,title:it.title,artist:it.artist||'',album:it.album||''}:null;}
 var nativeQueueSeq=0;
+function sendNativeQueue(payload,seq){
+  nativeLive=true;
+  Native.setQueue(payload).catch(function(err){
+    if(seq!==nativeQueueSeq)return;
+    nativeLive=false;
+    toast('Не удалось запустить Android-плеер'+(err&&err.message?': '+err.message:''));
+  });
+}
 function nativeArtwork(it){
   return new Promise(function(resolve){
     if(!it)return resolve('');
@@ -1286,9 +1294,9 @@ function nativeQueue(keep){
   nativeArtwork(byId(currentId)).then(function(art){
     if(seq!==nativeQueueSeq)return;
     var items=ids.map(function(id){var item=nItem(id);if(item&&id===currentId)item.art=art;return item;}).filter(Boolean);
-    nativeLive=true;nCall(Native.setQueue({items:items,index:Math.max(0,pos),keep:!!keep,repeat:repeat}));
+    sendNativeQueue({items:items,index:Math.max(0,pos),keep:!!keep,repeat:repeat},seq);
   }).catch(function(){
-    if(seq===nativeQueueSeq){nativeLive=true;nCall(Native.setQueue({items:ids.map(nItem).filter(Boolean),index:Math.max(0,pos),keep:!!keep,repeat:repeat}));}
+    if(seq===nativeQueueSeq)sendNativeQueue({items:ids.map(nItem).filter(Boolean),index:Math.max(0,pos),keep:!!keep,repeat:repeat},seq);
   });
 }
 var externalProvider='',externalPos=0,externalDur=0,externalPoll=null,externalSeq=0,externalEnded=false;
@@ -1332,8 +1340,7 @@ function load(id){
     var nativeLoadSeq=++nativeQueueSeq;
     nativeArtwork(it).then(function(art){
       if(nativeLoadSeq!==nativeQueueSeq||curId!==id)return;
-      nativeLive=true;
-      nCall(Native.setQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0}));
+      sendNativeQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0},nativeLoadSeq);
     });
   }else{audio.src=it.url;var p=audio.play();if(p&&p.catch)p.catch(function(){});}
   updateNow();markCurrent();setMedia(it);
