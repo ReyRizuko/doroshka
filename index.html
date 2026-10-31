@@ -2034,7 +2034,7 @@ $('#global-own-slot').addEventListener('click',async function(e){
  var b=e.target.closest('[data-act]');if(!b)return;
  var row=b.closest('[data-own-track]');if(!row)return;
  var t=window.DorozhkaOwnCatalog.get(row.dataset.ownTrack);if(!t)return;
- var id=await addRemoteRec({id:'own:'+t.id,name:'doroshka-own:'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0,provider:'Doroshka Music'});
+ var id=await addRemoteRec({id:'own:'+t.id,name:'doroshka-own:'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
  if(b.dataset.act==='own-queue')queueTrack(id);
  else{var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);}
 });
