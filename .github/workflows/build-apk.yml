@@ -21,12 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Arrange files
-        run: |
-          mkdir -p www scripts
-          if [ -f index.html ]; then mv index.html www/index.html; fi
-          if [ -f prepare.js ]; then mv prepare.js scripts/prepare.js; fi
-          ls -R www scripts
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -35,7 +29,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm install
-      - run: node scripts/prepare.js
+      - run: npm run prepare-assets
       - name: Check application JavaScript and provider panels
         run: node scripts/check-inline-js.js
       - run: npx cap add android
