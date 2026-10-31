@@ -258,7 +258,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .global-result-group{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.018)}
 .global-result-title{align-items:flex-start}
 .global-result-title span{max-width:55%;text-align:right;line-height:1.4}
-#global-archive-slot,#global-jamendo-slot{display:grid;gap:8px;min-width:0}
+#global-archive-slot{display:grid;gap:8px;min-width:0}
 .artist-shortcuts button:active,.artist-shortcuts button:hover{border-color:var(--accent);color:var(--fg)}
 .catalog-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .catalog-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);color:var(--fg);text-decoration:none;font-size:13px}
@@ -748,8 +748,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
             <button class="provider-chip" type="button" data-provider="dorozhka" aria-pressed="false">Дорожка</button>
             <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
-            <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
-          </div>
+            </div>
           <details class="global-settings">
             <summary>Настройки источников и уведомлений</summary>
 
@@ -768,17 +767,13 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
               <div class="global-result-title"><h4>Internet Archive</h4><span>аудиоархив · доступность зависит от записей</span></div>
               <div id="global-archive-slot"></div>
             </section>
-            <section class="global-result-group" data-provider-group="jamendo">
-              <div class="global-result-title"><h4>Jamendo</h4><span>поиск доступен после добавления API client_id</span></div>
-              <div id="global-jamendo-slot"></div>
-            </section>
-          </div>
+            </div>
         </section>
         <div class="source-switch" role="group" aria-label="Источники музыки">
           <button class="source-chip" type="button" data-source="youtube" aria-pressed="true">YouTube</button>
           <button class="source-chip" type="button" data-source="yandex" aria-pressed="false">Яндекс Музыка</button>
           <button class="source-chip" type="button" data-source="soundcloud" aria-pressed="false">SoundCloud</button>
-          <button class="source-chip" type="button" data-source="free" aria-pressed="false">Jamendo / Archive</button>
+          <button class="source-chip" type="button" data-source="free" aria-pressed="false">Internet Archive</button>
           
           <button class="source-chip" type="button" data-source="apple" aria-pressed="false">Apple Music</button>
           <button class="source-chip" type="button" data-source="deezer" aria-pressed="false">Deezer</button>
@@ -832,22 +827,8 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           <input class="search" id="web-q" type="search" placeholder="Исполнитель или название" aria-label="Поиск в интернете">
           <button class="btn primary" type="submit">Найти</button>
         </form>
-        <p class="hint">Jamendo и Internet Archive ищутся параллельно с YouTube. Доступные аудиофайлы можно добавить в «Файлы» и воспроизводить онлайн.</p>
-        <div class="how" id="jam-key">
-          <h3>Нужен бесплатный ключ Jamendo</h3>
-          <ol class="steps">
-            <li>Откройте <a href="https://devportal.jamendo.com" target="_blank" rel="noopener">devportal.jamendo.com</a> и зарегистрируйтесь.</li>
-            <li>Создайте приложение (Create application) и скопируйте Client ID.</li>
-            <li>Вставьте его ниже.</li>
-          </ol>
-          <form class="webform" id="key-form">
-            <input class="search" id="key-in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Client ID" aria-label="Client ID Jamendo">
-            <button class="btn primary" type="submit">Сохранить</button>
-          </form>
-        </div>
-        <button class="btn small" id="key-reset" hidden style="justify-self:start">Сменить ключ Jamendo</button>
+        <p class="hint">Internet Archive ищется вместе с другими источниками. Доступные аудиофайлы можно добавить в «Файлы» и воспроизводить онлайн.</p>
         <div id="web-status" class="status" aria-live="polite"></div>
-        <div id="web-au" class="list"></div>
         <div id="web-res" style="display:grid;gap:10px"></div>
         </section>
       </div>
@@ -1497,11 +1478,9 @@ async function nativePick(){
   }catch(e){setStatus('');toast('Не удалось добавить песни');}
 }
 
-/* ---------- поиск: Jamendo и Internet Archive ---------- */
-var IA='https://archive.org',JAM='https://api.jamendo.com/v3.0',AUD='https://api.audius.co/v1',webItems={},jamTracks={},audiusTracks={};
-var jamKey=ls.get('jamendoKey','');
+/* ---------- поиск:  и Internet Archive ---------- */
+var IA='https://archive.org',AUD='https://api.audius.co/v1',webItems={},audiusTracks={};
 function webStatus(t){$('#web-status').textContent=t;}
-function showKey(){$('#jam-key').hidden=!!jamKey;$('#key-reset').hidden=!jamKey;}
 function durOf(v){
   if(v==null||v==='')return 0;
   var t=String(v);
@@ -1515,13 +1494,6 @@ async function addRemoteRec(rec){
     libVer++;mcache.clear();renderAll();
   }
   return rec.id;
-}
-async function jamSearch(q){
-  var url=JAM+'/tracks/?client_id='+encodeURIComponent(jamKey)+'&format=json&limit=25&audioformat=mp32&imagesize=200&search='+encodeURIComponent(q);
-  var r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
-  var j=await r.json();
-  if(j.headers&&j.headers.status==='failed')throw new Error(j.headers.error_message||'Jamendo');
-  return (j.results||[]).filter(function(t){return t.audio;});
 }
 var ARTIST_QUERY_ALIASES={
   'медкид':['медкид','madk1d','medkid'],
@@ -1601,10 +1573,6 @@ async function iaSearchMany(q){
   });});
   return all.slice(0,40);
 }
-function jamRec(t){
-  return {id:'jm'+t.id,name:'jamendo:'+t.id,size:0,title:t.name||'Без названия',artist:t.artist_name||'',album:t.album_name||'',blob:null,cover:null,
-    remoteUrl:t.audio,coverRemote:t.image||t.album_image||'',dur:t.duration||0};
-}
 function fileMeta(d,f){
   var base=(f.name||'').split('/').pop().replace(/\.[^.]+$/,'');
   var cr=Array.isArray(d.creator)?d.creator[0]:(d.creator||'');
@@ -1614,13 +1582,6 @@ function iaRec(id,f,d){
   var m=fileMeta(d||{},f);
   return {id:'ia'+hash(id+'/'+f.name),name:'ia:'+id+'/'+f.name,size:0,title:m.title,artist:m.artist,album:'',blob:null,cover:null,
     remoteUrl:IA+'/download/'+encodeURIComponent(id)+'/'+f.name.split('/').map(encodeURIComponent).join('/'),coverRemote:'',dur:durOf(f.length)};
-}
-function renderJam(list){
-  list.forEach(function(t){jamTracks[t.id]=t;});
-  $('#web-au').innerHTML='<h4 class="sec">Jamendo</h4>'+list.map(function(t){
-    var r=jamRec(t);
-    return '<div class="row" data-jm="'+esc(t.id)+'"><button class="row-main" data-act="jmplay" aria-label="Играть: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">'+(r.dur?fmt(r.dur):'')+'</span></button><button class="x" data-act="jmadd" aria-label="Добавить в «Файлы»">'+svg('plus',18)+'</button></div>';
-  }).join('');
 }
 function renderIA(docs){
   docs.forEach(function(d){webItems[d.identifier]=d;});
@@ -1632,15 +1593,10 @@ function renderIA(docs){
 async function webSearch(q){
   webStatus('Ищу в Internet Archive…');
   $('#web-res').innerHTML='';
-  $('#web-au').innerHTML=jamKey?'Поиск Jamendo…':'<div class="status">Jamendo не запущен: для него нужен client_id. Остальные источники работают без ключа.</div>';
-  var terms=searchTerms(q);
-  var tasks=[jamKey?Promise.all(terms.slice(0,3).map(function(term){return jamSearch(term).catch(function(){return [];});})).then(function(sets){var seen={},all=[];sets.forEach(function(set){set.forEach(function(t){if(t&&t.id&&!seen[t.id]){seen[t.id]=1;all.push(t);}});});return all;}):Promise.resolve([]),iaSearchMany(q)];
-  var res=await Promise.allSettled(tasks),a=res[0],b=res[1],na=0,nb=0;
-  if(a.status==='fulfilled'&&a.value.length){na=a.value.length;renderJam(a.value);}
-  else if(jamKey&&a.status==='rejected')$('#web-au').textContent='Jamendo временно недоступен.';
-  if(b.status==='fulfilled'&&b.value.length){nb=b.value.length;renderIA(b.value);}
-  webStatus(nb?'Найдено записей: '+nb:(b.status==='rejected'?'Internet Archive временно недоступен.':'В Internet Archive ничего не найдено.'));
-  return {jamendo:na,archive:nb};
+  var docs=await iaSearchMany(q);
+  if(docs.length)renderIA(docs);
+  webStatus(docs.length?'Найдено записей: '+docs.length:'В Internet Archive ничего не найдено.');
+  return {archive:docs.length};
 }
 async function webFiles(card){
   var id=card.dataset.id,box=card.querySelector('.wfiles'),btn=card.querySelector('[data-act=files]');
@@ -1664,19 +1620,6 @@ async function webFiles(card){
   btn.disabled=false;
 }
 $('#web-form').addEventListener('submit',function(e){e.preventDefault();var q=$('#web-q').value.trim();if(q)webSearch(q);});
-$('#key-form').addEventListener('submit',function(e){
-  e.preventDefault();var v=$('#key-in').value.trim();
-  if(!v){toast('Вставьте Client ID');return;}
-  jamKey=v;ls.set('jamendoKey',jamKey);showKey();syncJamendoFilter();toast('Ключ сохранён');
-});
-$('#key-reset').onclick=function(){jamKey='';ls.set('jamendoKey','');$('#key-in').value='';showKey();syncJamendoFilter();};
-$('#web-au').addEventListener('click',async function(e){
-  var btn=e.target.closest('[data-act]');if(!btn)return;
-  var row=btn.closest('.row');var t=row&&jamTracks[row.dataset.jm];if(!t)return;
-  var rec=jamRec(t);
-  if(btn.dataset.act==='jmplay'){var id=await addRemoteRec(rec);playIds(sorted().map(function(x){return x.id;}),id);}
-  else if(btn.dataset.act==='jmadd'){await addRemoteRec(rec);btn.disabled=true;btn.textContent='✓';toast('Добавлено в «Файлы»');}
-});
 $('#web-res').addEventListener('click',async function(e){
   var btn=e.target.closest('[data-act]');if(!btn)return;
   var card=btn.closest('.pl');if(!card)return;
@@ -1691,17 +1634,12 @@ $('#web-res').addEventListener('click',async function(e){
     btn.textContent='Добавлено: '+fl.length;
   }
 });
-showKey();
-/* Переносим существующие блоки поиска в единый экран, не дублируя обработчики и ключи. */
-$('#global-key-settings').appendChild($('#jam-key'));
-$('#global-key-settings').appendChild($('#key-reset'));
+/* Переносим блок Internet Archive в единый экран. */
 $('#global-archive-slot').appendChild($('#web-status'));
 $('#global-archive-slot').appendChild($('#web-res'));
-$('#global-jamendo-slot').appendChild($('#web-au'));
 $('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Введите запрос для поиска в Audius.</div><div id="audius-results"></div>';
 $('#yt-open-search').hidden=true;
 var activeProvider='all';
-syncJamendoFilter();
 if(Native){
   var ns=$('#notification-status'),nb=$('#notification-settings-button');
   function refreshNotificationStatus(){
@@ -1727,16 +1665,8 @@ function setProviderFilter(name){
   });
   document.querySelectorAll('[data-provider-group]').forEach(function(g){
     var visible=name==='all'||g.dataset.providerGroup.split(' ').indexOf(name)!==-1;
-    if(g.dataset.providerGroup==='jamendo'&&!jamKey)visible=false;
     g.hidden=!visible;
   });
-}
-function syncJamendoFilter(){
-  var enabled=!!jamKey;
-  var chip=document.querySelector('[data-provider="jamendo"]');
-  if(chip)chip.hidden=!enabled;
-  if(activeProvider==='jamendo'&&!enabled)activeProvider='all';
-  setProviderFilter(activeProvider);
 }
 document.querySelectorAll('[data-provider]').forEach(function(b){
   b.addEventListener('click',function(){setProviderFilter(b.dataset.provider);});
@@ -1756,7 +1686,7 @@ async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
   $('#global-status').textContent='Ищу в собственном каталоге, Audius и Internet Archive…';
-  $('#web-au').innerHTML='';$('#web-res').innerHTML='';
+  $('#web-res').innerHTML='';
   $('#global-audius-slot').innerHTML='<div class="status">Ищу треки и профили исполнителей…</div>';
   $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу записи с открытой лицензией…</div>';
   var results=await Promise.allSettled([webSearch(q),audiusSearch(q),window.DorozhkaSource.search(q)]);
@@ -1765,7 +1695,7 @@ async function runGlobalSearch(q){
   else{$('#global-dorozhka-slot').innerHTML='<div class="status">Каталог временно недоступен.</div>';notes.push('Дорожка: ошибка');}
   if(ar.status==='fulfilled'&&ar.value.length){renderAudius(ar.value);notes.push('Audius: '+ar.value.length);}
   else{$('#global-audius-slot').innerHTML='<div class="status">'+(ar.status==='rejected'?'Audius временно недоступен.':'Совпадений нет.')+'</div>';notes.push('Audius: 0');}
-  if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive+' · Jamendo: '+wr.value.jamendo);
+  if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive);
   else notes.push('Архивные источники временно недоступны.');
   $('#global-status').textContent=notes.join(' · ');
 }
