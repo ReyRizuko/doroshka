@@ -573,6 +573,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         try {
             goForeground();
         } catch (Exception e) {
+            emitError("");
+            PlaybackPlugin.emit("stopped", new JSObject());
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -1289,6 +1291,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             session.setActive(false);
             session.release();
         }
+        PlaybackPlugin.emit("stopped", new JSObject());
         super.onDestroy();
     }
 }
