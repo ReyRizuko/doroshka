@@ -200,6 +200,12 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(96,125,70,.16),transparen
 .source-intro{padding:15px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(135deg,rgba(183,243,107,.07),transparent 65%),var(--surface);display:grid;gap:6px}
 .source-intro h3{margin:0;font:600 15px var(--f-body)}
 .source-intro p{margin:0;color:var(--muted);font-size:13px}
+#global-key-settings .source-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+#global-key-settings #spotify-config-form{grid-template-columns:repeat(2,minmax(0,1fr)) auto}
+#global-key-settings #spotify-config-form button{grid-column:1/-1}
+#global-apple-slot,#global-spotify-slot{display:grid;gap:5px}
+#global-apple-slot .row-main,#global-spotify-slot .row-main{grid-template-columns:48px minmax(0,1fr) auto}
+@media(max-width:560px){#global-key-settings #spotify-config-form{grid-template-columns:1fr}#global-key-settings #spotify-config-form button{grid-column:auto}}
 .source-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .source-form .search{min-width:0}
 .source-settings{border:1px solid var(--line);border-radius:13px;padding:11px 13px;background:rgba(255,255,255,.02)}
@@ -749,11 +755,33 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
             <button class="provider-chip" type="button" data-provider="dorozhka" aria-pressed="false">Audius</button>
             
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
+            <button class="provider-chip" type="button" data-provider="apple" aria-pressed="false">Apple Music</button>
+            <button class="provider-chip" type="button" data-provider="spotify" aria-pressed="false">Spotify</button>
             </div>
           <details class="global-settings">
             <summary>Настройки источников и уведомлений</summary>
 
             <div id="global-key-settings">
+              <details class="source-settings">
+                <summary>Apple Music · полный каталог</summary>
+                <form class="source-form" id="apple-token-form">
+                  <input class="search" id="apple-token-in" type="password" autocomplete="off" placeholder="Apple Music Developer Token" aria-label="Apple Music Developer Token">
+                  <button class="btn" type="submit">Сохранить</button>
+                </form>
+                <p class="hint">MusicKit ищет в официальном каталоге Apple Music. Для поиска нужен Developer Token; для полного воспроизведения также потребуется авторизация Apple Music и активная подписка. Токен создаётся владельцем Apple Developer account и хранится только на этом устройстве. Не отправляй его в чат.</p>
+                <div id="apple-catalog-status" class="status" aria-live="polite"></div>
+              </details>
+              <details class="source-settings">
+                <summary>Spotify · каталог и воспроизведение</summary>
+                <form class="source-form" id="spotify-config-form">
+                  <input class="search" id="spotify-client-id-in" type="text" autocomplete="off" placeholder="Spotify Client ID" aria-label="Spotify Client ID">
+                  <input class="search" id="spotify-redirect-in" type="url" autocomplete="url" placeholder="Redirect URI (точный адрес приложения)" aria-label="Spotify Redirect URI">
+                  <button class="btn" type="submit">Сохранить</button>
+                </form>
+                <button class="btn small" id="spotify-connect" type="button">Войти в Spotify</button>
+                <p class="hint">Нужен Client ID из Spotify Developer Dashboard. Redirect URI должен совпадать с адресом, зарегистрированным в настройках приложения Spotify. Полное воспроизведение через Web Playback SDK требует Premium; в Android WebView может потребоваться открыть трек в официальном приложении. Авторизация использует PKCE, Client Secret не нужен.</p>
+                <div id="spotify-catalog-status" class="status" aria-live="polite"></div>
+              </details>
               <details class="source-settings" open>
                 <summary>Подключить каталог Jamendo</summary>
                 <form class="source-form" id="dorozhka-api-form">
@@ -780,6 +808,14 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
             <section class="global-result-group" data-provider-group="archive">
               <div class="global-result-title"><h4>Internet Archive</h4><span>аудиоархив · доступность зависит от записей</span></div>
               <div id="global-archive-slot"></div>
+            </section>
+            <section class="global-result-group" data-provider-group="apple">
+              <div class="global-result-title"><h4>Apple Music</h4><span>официальный мировой каталог · воспроизведение через MusicKit</span></div>
+              <div id="global-apple-slot"><div class="status">Добавь Developer Token в настройках источников.</div></div>
+            </section>
+            <section class="global-result-group" data-provider-group="spotify">
+              <div class="global-result-title"><h4>Spotify</h4><span>официальный мировой каталог · воспроизведение зависит от Premium и поддержки устройства</span></div>
+              <div id="global-spotify-slot"><div class="status">Подключи Spotify в настройках источников.</div></div>
             </section>
             </div>
         </section>
@@ -870,6 +906,9 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 
 <script src="sources/dorozhka-source.js"></script>
 <script src="sources/dorozhka-catalog.js"></script>
+<script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+<script src="sources/dorozhka-major-catalogs.js"></script>
 <script src="vendor/jsmediatags.min.js"></script>
 <script>
 (function(){
@@ -1657,22 +1696,41 @@ function renderDorozhka(list){
     return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+landing+'</div>';
   }).join('');
 }
-
+function renderMajorCatalog(slotId,list,provider){
+  var slot=$(slotId),empty=provider==='Apple Music'?'Apple Music':'Spotify';
+  if(!list.length){slot.innerHTML='<div class="status">В '+empty+' ничего не найдено.</div>';return;}
+  slot.innerHTML=list.map(function(t){
+    var attr=provider==='Apple Music'?'data-apple-track':'data-spotify-track';
+    var act=provider==='Apple Music'?'apple-play':'spotify-play';
+    var details=[t.creator||'Исполнитель не указан',t.album||provider].join(' · ');
+    var open=t.url?'<a class="x" href="'+esc(t.url)+'" target="_blank" rel="noopener" aria-label="Открыть в '+provider+'">↗</a>':'';
+    return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="'+act+'" aria-label="Воспроизвести: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+open+'</div>';
+  }).join('');
+}
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
-  $('#global-status').textContent='Ищу в собственном каталоге, Audius и аудиоархиве…';
+  $('#global-status').textContent='Ищу во всех подключённых каталогах…';
   $('#web-res').innerHTML='';
   $('#global-music-slot').innerHTML='<div class="status">Ищу в Jamendo…</div>';
-  $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу треки в Audius…</div>';
-  var results=await Promise.allSettled([webSearch(q),window.DorozhkaSource.search(q),window.DorozhkaCatalog.search(q)]);
-  var wr=results[0],dr=results[1],mr=results[2],notes=[];
+  $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу в Audius…</div>';
+  $('#global-apple-slot').innerHTML='<div class="status">Ищу в Apple Music…</div>';
+  $('#global-spotify-slot').innerHTML='<div class="status">Ищу в Spotify…</div>';
+  var results=await Promise.allSettled([
+    webSearch(q),window.DorozhkaSource.search(q),window.DorozhkaCatalog.search(q),
+    window.DorozhkaMajorCatalogs.searchApple(q),window.DorozhkaMajorCatalogs.searchSpotify(q)
+  ]);
+  var wr=results[0],dr=results[1],mr=results[2],ar=results[3],sr=results[4],notes=[];
   if(mr.status==='fulfilled'){renderMusic(mr.value);notes.push('Jamendo: '+mr.value.length);}
   else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Jamendo временно недоступен')+'</div>';notes.push('Jamendo: ошибка');}
   if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Audius: '+dr.value.length);}
   else{$('#global-dorozhka-slot').innerHTML='<div class="status">Audius временно недоступен: '+esc(dr.reason&&dr.reason.message||'ошибка сети')+'</div>';notes.push('Audius: ошибка');}
   if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive);
   else notes.push('Internet Archive: ошибка');
+  if(ar.status==='fulfilled'){renderMajorCatalog('#global-apple-slot',ar.value,'Apple Music');notes.push('Apple Music: '+ar.value.length);}
+  else{$('#global-apple-slot').innerHTML='<div class="status">'+esc(ar.reason&&ar.reason.message||'Apple Music недоступен')+'</div>';notes.push('Apple Music: не подключён');}
+  if(sr.status==='fulfilled'){renderMajorCatalog('#global-spotify-slot',sr.value,'Spotify');notes.push('Spotify: '+sr.value.length);}
+  else{$('#global-spotify-slot').innerHTML='<div class="status">'+esc(sr.reason&&sr.reason.message||'Spotify недоступен')+'</div>';notes.push('Spotify: не подключён');}
   $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
@@ -1695,6 +1753,20 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
   var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
   playIds(sorted().map(function(x){return x.id;}),id);
 });
+$('#global-apple-slot').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-act=apple-play]');if(!b)return;
+  var row=b.closest('[data-apple-track]');if(!row)return;
+  var status=$('#apple-catalog-status');status.textContent='Запускаю Apple Music…';
+  try{await window.DorozhkaMajorCatalogs.playApple(row.dataset.appleTrack);status.textContent='Воспроизведение Apple Music запущено.';}
+  catch(err){status.textContent=err.message||'Не удалось запустить Apple Music.';}
+});
+$('#global-spotify-slot').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-act=spotify-play]');if(!b)return;
+  var row=b.closest('[data-spotify-track]');if(!row)return;
+  var status=$('#spotify-catalog-status');status.textContent='Запускаю Spotify…';
+  try{var result=await window.DorozhkaMajorCatalogs.playSpotify(row.dataset.spotifyTrack);status.textContent=result&&result.external?'Открыл официальный трек Spotify.':'Команда воспроизведения отправлена в Spotify.';}
+  catch(err){status.textContent=err.message||'Не удалось запустить Spotify.';}
+});
 
 
 /* ---------- Настройка каталога Jamendo ---------- */
@@ -1712,11 +1784,30 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
   });
 }());
 
-/* ---------- Поиск в официальном каталоге Spotify ---------- */
-['doroshka_spotify_token','doroshka_spotify_expiry','doroshka_spotify_verifier','doroshka_spotify_state'].forEach(function(k){
-  sessionStorage.removeItem(k);
-  localStorage.removeItem(k);
-});
+/* ---------- Настройки официальных каталогов Apple Music и Spotify ---------- */
+(function(){
+  var api=window.DorozhkaMajorCatalogs;
+  var appleInput=$('#apple-token-in'),appleStatus=$('#apple-catalog-status');
+  var spotifyId=$('#spotify-client-id-in'),spotifyRedirect=$('#spotify-redirect-in'),spotifyStatus=$('#spotify-catalog-status');
+  appleInput.value=api.appleBase();
+  var saved=api.spotifyBase();spotifyId.value=saved.clientId;spotifyRedirect.value=saved.redirectUri;
+  $('#apple-token-form').addEventListener('submit',function(e){
+    e.preventDefault();
+    try{api.setAppleToken(appleInput.value);appleStatus.textContent=appleInput.value.trim()?'Apple Music Developer Token сохранён на устройстве.':'Токен очищен.';toast('Настройки Apple Music сохранены');}
+    catch(err){appleStatus.textContent=err.message||'Не удалось сохранить токен.';}
+  });
+  $('#spotify-config-form').addEventListener('submit',function(e){
+    e.preventDefault();
+    try{api.setSpotify(spotifyId.value,spotifyRedirect.value);spotifyStatus.textContent='Spotify Client ID и Redirect URI сохранены на устройстве.';toast('Настройки Spotify сохранены');}
+    catch(err){spotifyStatus.textContent=err.message||'Проверь настройки Spotify.';}
+  });
+  $('#spotify-connect').addEventListener('click',function(){
+    try{api.setSpotify(spotifyId.value,spotifyRedirect.value);api.authorizeSpotify().catch(function(err){spotifyStatus.textContent=err.message||'Не удалось начать авторизацию Spotify.';});}
+    catch(err){spotifyStatus.textContent=err.message||'Проверь настройки Spotify.';}
+  });
+  if(api.appleBase())appleStatus.textContent='Developer Token сохранён. Поиск Apple Music доступен.';
+  if(saved.clientId)spotifyStatus.textContent='Spotify Client ID сохранён. Нажми «Войти в Spotify».';
+}());
 // Native Android equalizer
 var EQ_PRESETS={flat:[0,0,0,0,0],bass:[7,5,1,0,2],vocal:[-2,1,5,5,2],treble:[-2,-1,0,5,7],night:[3,1,-1,-2,-3]};
 var eqLevels=ls.get('eqLevels',[0,0,0,0,0]),eqEnabled=ls.get('eqEnabled',true);
