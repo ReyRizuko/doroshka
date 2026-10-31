@@ -579,6 +579,12 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
 }
 @media(max-width:380px){.wrap{padding-inline:13px}.top{margin-inline:-13px;padding-inline:13px}.library-hero{padding:20px 17px;min-height:230px}.hero-art{width:112px;height:112px;right:-13px}.library-hero-copy{max-width:72%}.library-hero h2{font-size:30px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+#global-dorozhka-slot{display:grid;gap:6px;min-width:0}
+#global-dorozhka-slot .row{padding:4px;border-radius:12px}
+#global-dorozhka-slot .row-main{grid-template-columns:48px minmax(0,1fr) auto;padding:7px}
+#global-dorozhka-slot .thumb{width:48px;height:48px;border-radius:11px}
+#global-dorozhka-slot .rt b{font-size:13px}
+#global-dorozhka-slot .rt small{font-size:10px;line-height:1.4;white-space:normal}
 </style>
 </head>
 <body>
@@ -709,6 +715,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
           <div id="global-status" class="status" aria-live="polite">Введите название трека или исполнителя.</div>
           <div class="provider-filter" role="group" aria-label="Фильтр источников">
             <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все</button>
+            <button class="provider-chip" type="button" data-provider="dorozhka" aria-pressed="false">Дорожка</button>
             <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
             <button class="provider-chip" type="button" data-provider="jamendo" aria-pressed="false">Jamendo</button>
@@ -722,6 +729,10 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
             <div id="global-key-settings"></div>
           </details>
           <div class="global-results">
+            <section class="global-result-group" data-provider-group="dorozhka">
+              <div class="global-result-title"><h4>Дорожка · открытый каталог</h4><span>собственный поиск по открыто лицензированной музыке</span></div>
+              <div id="global-dorozhka-slot"><div class="status">Введите запрос — найду доступные полные записи.</div></div>
+            </section>
             <section class="global-result-group" data-provider-group="audius">
               <div class="global-result-title"><h4>Audius</h4><span>поиск и поток внутри приложения</span></div>
               <div id="global-audius-slot"><div class="status">Введите запрос для поиска.</div></div>
@@ -840,6 +851,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
 <input type="file" id="f-folder" hidden multiple webkitdirectory>
 <input type="file" id="f-list" hidden multiple accept=".csv,.json,.txt,text/csv,application/json">
 
+<script src="sources/dorozhka-source.js"></script>
 <script src="vendor/jsmediatags.min.js"></script>
 <script>
 (function(){
@@ -1705,13 +1717,16 @@ document.querySelectorAll('[data-provider]').forEach(function(b){
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
-  $('#global-status').textContent='Ищу в Audius и Internet Archive…';
+  $('#global-status').textContent='Ищу в собственном каталоге, Audius и Internet Archive…';
   $('#web-au').innerHTML='';$('#web-res').innerHTML='';
   $('#global-audius-slot').innerHTML='<div class="status">Ищу треки и профили исполнителей…</div>';
-  var results=await Promise.allSettled([webSearch(q),audiusSearch(q)]);
-  var wr=results[0],ar=results[1],notes=[];
-  if(ar.status==='fulfilled'&&ar.value.length){renderAudius(ar.value);notes.push('Audius: '+ar.value.length+' результатов');}
-  else{$('#global-audius-slot').innerHTML='<div class="status">'+(ar.status==='rejected'?'Audius временно недоступен.':'В Audius ничего не найдено. Это не означает, что трека нет в других сервисах.')+'</div>';notes.push('Audius: '+(ar.status==='rejected'?'ошибка':'0 результатов'));}
+  $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу записи с открытой лицензией…</div>';
+  var results=await Promise.allSettled([webSearch(q),audiusSearch(q),window.DorozhkaSource.search(q)]);
+  var wr=results[0],ar=results[1],dr=results[2],notes=[];
+  if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Дорожка: '+dr.value.length);}
+  else{$('#global-dorozhka-slot').innerHTML='<div class="status">Каталог временно недоступен.</div>';notes.push('Дорожка: ошибка');}
+  if(ar.status==='fulfilled'&&ar.value.length){renderAudius(ar.value);notes.push('Audius: '+ar.value.length);}
+  else{$('#global-audius-slot').innerHTML='<div class="status">'+(ar.status==='rejected'?'Audius временно недоступен.':'Совпадений нет.')+'</div>';notes.push('Audius: 0');}
   if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive+' · Jamendo: '+wr.value.jamendo);
   else notes.push('Архивные источники временно недоступны.');
   $('#global-status').textContent=notes.join(' · ');
@@ -1721,6 +1736,13 @@ $('#global-form').addEventListener('submit',function(e){
 });
 document.querySelectorAll('[data-artist]').forEach(function(b){
   b.addEventListener('click',function(){setTab('web');syncBottomNav('web');runGlobalSearch(b.dataset.artist);});
+});
+$('#global-dorozhka-slot').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-act=dsplay]');if(!b)return;
+  var row=b.closest('[data-ds]');if(!row)return;
+  var t=window.DorozhkaSource.get(row.dataset.ds);if(!t)return;
+  var id=await addRemoteRec({id:'ds'+t.id,name:'dorozhka:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
+  playIds(sorted().map(function(x){return x.id;}),id);
 });
 $('#global-audius-slot').addEventListener('click',async function(e){
   var b=e.target.closest('[data-act]');if(!b)return;
