@@ -174,6 +174,7 @@
   if(root.document)root.document.addEventListener('visibilitychange',function(){if(!root.document.hidden)handleSpotifyReturn();});
   function playSpotify(id){
     var item=spotifyRecords[String(id)],uri=item&&item.uri||('spotify:track:'+String(id));
+    spotifyEndedTrack='';spotifyLastState=null;
     initSpotifyPlayer();
     if(!spotifyPlayer||!spotifyDevice)return Promise.reject(new Error('Встроенный Spotify-плеер недоступен на этом устройстве. Открытие внешнего приложения отключено.'));
     return spotifyPlayer.activateElement().then(function(){
@@ -198,7 +199,7 @@
   function seek(provider,seconds){
     var value=Math.max(0,Number(seconds)||0);
     if(provider==='Apple Music')return Promise.resolve(appleInstance().seekToTime(value));
-    if(provider==='Spotify'&&spotifyPlayer)return spotifyPlayer.seek(value*1000);
+    if(provider==='Spotify'&&spotifyPlayer){if(value<=1)spotifyEndedTrack='';return spotifyPlayer.seek(value*1000);}
     return Promise.reject(new Error('Перемотка для '+provider+' недоступна.'));
   }
   function setVolume(provider,value){
