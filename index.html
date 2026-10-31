@@ -396,6 +396,54 @@ body{padding-top:18px;background:
   .tabs{position:sticky;top:12px;z-index:5}
 }
 
+
+/* ---------- Визуальная система 2026: монохромный поток ---------- */
+:root{--bg:#08090c;--surface:#111216;--surface-2:#1b1c21;--line:#292a30;--fg:#f5f5f6;--muted:#96979f;--accent:#f2f2f2;--accent-fg:#111;--ok:#a8d6b0;--warn:#e4bd82;color-scheme:dark}
+body{background:radial-gradient(ellipse at 50% -18%,rgba(255,255,255,.12),transparent 42%),#08090c;padding-top:18px}
+.wrap{max-width:1320px}
+.top{border-bottom:1px solid rgba(255,255,255,.08);padding:8px 4px 17px;margin-bottom:20px}
+.brand{font-size:20px;letter-spacing:-.045em}.brand:after{content:'YOUR SOUND';font:500 9px var(--f-mono);letter-spacing:.2em;color:#777;margin-left:8px;align-self:end;padding-bottom:2px}
+.brand svg{color:#fff;filter:none}
+.btn{border-radius:999px;background:#202126;border-color:rgba(255,255,255,.08);transition:background .16s,border-color .16s,transform .16s}
+.btn:hover{background:#303138;border-color:rgba(255,255,255,.2);transform:translateY(-1px)}
+.btn.primary,.btn.arm,.hero-cta{background:#f3f3f4;color:#101114;border-color:transparent}
+.btn.primary:hover,.hero-cta:hover{background:#fff}
+.app{gap:22px}
+@media(min-width:900px){.app{grid-template-columns:330px minmax(0,1fr);gap:28px}}
+.player{border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.07),transparent 52%),#121318;border:1px solid rgba(255,255,255,.09);box-shadow:0 24px 80px rgba(0,0,0,.38);padding:20px}
+.cover{border-radius:20px;background-color:#24252a;box-shadow:0 22px 60px rgba(0,0,0,.38)}
+.meta h2{font-size:19px;letter-spacing:-.035em}.ib.big{background:#f4f4f4;color:#111;box-shadow:0 8px 28px rgba(255,255,255,.12)}
+.ib.on{color:#fff}.seek{color:#85868e}
+.tabs{background:#111216;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:5px;gap:5px}
+.tab{border-radius:11px}.tab[aria-selected=true]{background:#292a30;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}.tab[aria-selected=true] .tab-icon{color:#fff}
+.library-hero{min-height:270px;border-radius:24px;padding:32px;background:radial-gradient(ellipse at 82% 12%,rgba(255,255,255,.26),transparent 30%),linear-gradient(120deg,#25262c,#111216 70%);border-color:rgba(255,255,255,.12);box-shadow:0 20px 65px rgba(0,0,0,.32)}
+.library-hero:before{width:390px;height:390px;right:4%;top:-250px;border-color:rgba(255,255,255,.18);box-shadow:0 0 0 30px rgba(255,255,255,.025),0 0 0 64px rgba(255,255,255,.025),0 0 0 98px rgba(255,255,255,.018)}
+.eyebrow{color:#bfc0c6;letter-spacing:.2em}.library-hero h2{font-size:clamp(34px,5vw,54px);letter-spacing:-.07em}.library-hero p{color:#b9bac1}
+.hero-art{width:205px;height:205px;right:9%;border-radius:36px;transform:translateY(-50%) rotate(-13deg);background:linear-gradient(145deg,#f0f0f0,#777982 54%,#27282e);box-shadow:0 28px 80px rgba(0,0,0,.5)}
+.hero-art:before,.hero-art:after{border-color:rgba(0,0,0,.18)}.hero-art span{border-color:rgba(0,0,0,.35);box-shadow:0 0 0 12px rgba(0,0,0,.06),0 0 0 24px rgba(0,0,0,.04)}.hero-art i{background:#292a30}.hero-art b{color:rgba(0,0,0,.65)}
+.library-toolbar h3{font-size:25px;letter-spacing:-.055em}.library-count{letter-spacing:.16em}
+#q.search,.search{background:#101115;border-color:#2b2c32;color:#f4f4f5;border-radius:13px}
+#q.search:focus,.search:focus{border-color:#777;box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+.list{gap:5px}.row{border-radius:14px;padding:3px 5px}.row:hover{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.06)}
+.thumb{border-radius:11px;background-color:#292a30}.row.on .rt b,.trk-row.on .rt b{color:#fff}
+.pl,.how,.global-result-group{background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 65%),#121318;border-color:rgba(255,255,255,.085);border-radius:18px}
+.global-heading h3{letter-spacing:-.06em}.global-heading>span{color:#c4c5cb}.provider-chip{background:#18191e;border-color:#303138;color:#aaa}.provider-chip.active{background:#eee;color:#111;border-color:#eee}
+.source-chip[aria-pressed=true]{background:#292a30;color:#fff}.source-intro{background:linear-gradient(135deg,rgba(255,255,255,.06),transparent 65%),#121318}
+.mini{background:rgba(16,17,21,.96);border-color:rgba(255,255,255,.12);backdrop-filter:blur(24px)}.mini-prog{background:#eee}
+.toast{background:#eee;color:#111}
+.spotify-embed-card{display:grid;gap:12px;padding:17px;border:1px solid rgba(255,255,255,.1);border-radius:19px;background:linear-gradient(140deg,rgba(255,255,255,.055),transparent 55%),#111216}
+.spotify-embed-head{display:grid;gap:5px}.spotify-embed-head h3{margin:0;font:600 16px var(--f-display);letter-spacing:-.03em}.spotify-embed-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.spotify-embed-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.spotify-embed-form .search{min-width:0}
+.spotify-embed-frame{overflow:hidden;border-radius:14px;background:#18191d;min-height:152px}.spotify-embed-frame iframe{display:block;width:100%;height:352px;border:0}
+.spotify-embed-actions{display:flex;gap:8px;flex-wrap:wrap}.spotify-embed-note{font-size:12px;color:#85868e;line-height:1.5}
+@media(max-width:899px){
+ body{padding-top:10px}.brand:after{display:none}.library-hero{min-height:218px;padding:23px 21px}.library-hero h2{font-size:36px}.hero-art{width:155px;height:155px;right:-28px;opacity:.62}.library-hero-copy{max-width:76%}
+ .player{background:linear-gradient(120deg,rgba(255,255,255,.06),transparent 70%),#121318}
+ .tabs{background:rgba(17,18,22,.97);border-color:rgba(255,255,255,.12)}
+}
+@media(max-width:560px){.spotify-embed-form{grid-template-columns:1fr}.spotify-embed-form .btn{justify-content:center}.spotify-embed-frame iframe{height:352px}.library-hero-copy{max-width:82%}}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}}
+
 </style>
 </head>
 <body>
@@ -469,6 +517,13 @@ body{padding-top:18px;background:
           </form>
           <p class="hint">Воспроизведение и доступность треков определяются самим Spotify и вашей учётной записью.</p>
         </div>
+        <section class="spotify-embed-card" aria-label="Плейлист Spotify">
+          <div class="spotify-embed-head"><span class="eyebrow">ТВОЯ КОЛЛЕКЦИЯ</span><h3>Открыть мой плейлист</h3><p>Вставь ссылку на плейлист Spotify — официальный плеер появится прямо здесь.</p></div>
+          <form class="spotify-embed-form" id="spotify-embed-form"><input class="search" id="spotify-playlist-url" type="url" inputmode="url" placeholder="https://open.spotify.com/playlist/…" aria-label="Ссылка на плейлист Spotify" autocomplete="off"><button class="btn primary" type="submit">Подключить</button></form>
+          <div class="spotify-embed-frame" id="spotify-embed-frame"><div class="empty-box" style="margin:10px;border:0"><h3>Плейлист пока не выбран</h3><p>Вставь ссылку на свой плейлист, чтобы открыть встроенный плеер Spotify.</p></div></div>
+          <div class="spotify-embed-actions" id="spotify-embed-actions" hidden><a class="btn small" id="spotify-embed-open" target="_blank" rel="noopener">Открыть в Spotify</a><button class="btn small" type="button" id="spotify-embed-clear">Отключить</button></div>
+          <p class="spotify-embed-note">Это официальный встроенный плеер Spotify. Полные треки, вход в аккаунт и фоновое воспроизведение зависят от Spotify и типа аккаунта; управление этим звуком через системный плеер «Дорожки» пока не поддерживается.</p>
+        </section>
         <div class="how">
           <h3>Импорт плейлистов</h3>
           <p>Для сопоставления плейлистов с собственными файлами можно использовать экспорт CSV/JSON.</p>
@@ -1508,6 +1563,25 @@ $('#global-audius-slot').addEventListener('click',async function(e){
   sessionStorage.removeItem(k);
   localStorage.removeItem(k);
 });
+/* Встроенный официальный Spotify Embed для ссылок на плейлисты. */
+function spotifyPlaylistId(raw){
+  var s=String(raw||'').trim(),m=s.match(/(?:open\\.spotify\\.com\\/(?:intl-[a-z]{2}\\/)?playlist\\/|spotify:playlist:)([A-Za-z0-9]+)/i);
+  return m?m[1]:'';
+}
+$('#spotify-embed-form').addEventListener('submit',function(e){
+  e.preventDefault();var raw=$('#spotify-playlist-url').value.trim(),id=spotifyPlaylistId(raw);
+  if(!id){toast('Вставь ссылку именно на плейлист Spotify');return;}
+  var canonical='https://open.spotify.com/playlist/'+id;
+  $('#spotify-embed-frame').innerHTML='<iframe title="Плейлист Spotify" src="https://open.spotify.com/embed/playlist/'+encodeURIComponent(id)+'?utm_source=generator&theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+  $('#spotify-embed-open').href=canonical;$('#spotify-embed-actions').hidden=false;
+  ls.set('spotifyPlaylistUrl',canonical);
+});
+$('#spotify-embed-clear').addEventListener('click',function(){
+  $('#spotify-embed-frame').innerHTML='<div class="empty-box" style="margin:10px;border:0"><h3>Плейлист отключён</h3><p>Вставь ссылку на другой плейлист Spotify.</p></div>';
+  $('#spotify-embed-actions').hidden=true;$('#spotify-playlist-url').value='';ls.set('spotifyPlaylistUrl','');
+});
+var savedSpotifyPlaylist=ls.get('spotifyPlaylistUrl','');
+if(savedSpotifyPlaylist){$('#spotify-playlist-url').value=savedSpotifyPlaylist;var sid=spotifyPlaylistId(savedSpotifyPlaylist);if(sid){$('#spotify-embed-frame').innerHTML='<iframe title="Плейлист Spotify" src="https://open.spotify.com/embed/playlist/'+encodeURIComponent(sid)+'?utm_source=generator&theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>';$('#spotify-embed-open').href='https://open.spotify.com/playlist/'+sid;$('#spotify-embed-actions').hidden=false;}}
 $('#spotify-track-form').addEventListener('submit',function(e){
   e.preventDefault();
   var q=$('#spotify-track-q').value.trim();
