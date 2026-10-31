@@ -60,7 +60,7 @@
   function randomString(n){
     var a=new Uint8Array(n);root.crypto.getRandomValues(a);return b64url(a);
   }
-  function redirectUri(){return spotifyRedirect||root.location.href.split('?')[0].split('#')[0];}
+  function redirectUri(){return spotifyRedirect||(root.SpotifyOAuth?'doroshka://spotify-callback':root.location.href.split('?')[0].split('#')[0]);}
   function authorizeSpotify(){
     if(!spotifyClientId)return Promise.reject(new Error('Сначала сохрани Spotify Client ID.'));
     if(!root.crypto||!root.crypto.subtle)return Promise.reject(new Error('Для Spotify OAuth нужен защищённый HTTPS-контекст.'));
@@ -68,11 +68,21 @@
     return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier)).then(function(hash){
       try{sessionStorage.setItem('dorozhkaSpotifyVerifier',verifier);sessionStorage.setItem('dorozhkaSpotifyState',state);}catch(e){}
       var params=new URLSearchParams({client_id:spotifyClientId,response_type:'code',redirect_uri:redirectUri(),code_challenge_method:'S256',code_challenge:b64url(new Uint8Array(hash)),state:state,scope:scopes});
-      root.location.href='https://accounts.spotify.com/authorize?'+params.toString();
+      var authUrl='https://accounts.spotify.com/authorize?'+params.toString();
+      if(root.SpotifyOAuth&&typeof root.SpotifyOAuth.openAuthUrl==='function')root.SpotifyOAuth.openAuthUrl(authUrl);
+      else root.location.href=authUrl;
     });
   }
   function exchangeCode(){
-    var params=new URLSearchParams(root.location.search),code=params.get('code'),state=params.get('state');
+    var params=new URLSearchParams(root.location.search);
+    if(!params.get('code')&&root.SpotifyOAuth&&typeof root.SpotifyOAuth.getPendingUrl==='function'){
+      try{
+        var pending=root.SpotifyOAuth.getPendingUrl();
+        if(pending){params=new URL(pending).searchParams;root.SpotifyOAuth.clearPendingUrl();}
+      }catch(e){}
+    }
+    var code=params.get('code'),state=params.get('state'),oauthError=params.get('error');
+    if(oauthError)return Promise.reject(new Error('Spotify: авторизация отклонена ('+oauthError+').'));
     if(!code)return Promise.resolve(false);
     var verifier='',expected='';
     try{verifier=sessionStorage.getItem('dorozhkaSpotifyVerifier')||'';expected=sessionStorage.getItem('dorozhkaSpotifyState')||'';}catch(e){}
@@ -83,7 +93,12 @@
       .then(function(j){
         spotifyToken=j.access_token;
         try{sessionStorage.setItem('dorozhkaSpotifyAccessToken',spotifyToken);sessionStorage.setItem('dorozhkaSpotifyTokenExpiry',String(Date.now()+Number(j.expires_in||3600)*1000));sessionStorage.removeItem('dorozhkaSpotifyVerifier');sessionStorage.removeItem('dorozhkaSpotifyState');}catch(e){}
-        root.history.replaceState({},'',redirectUri());initSpotifyPlayer();return true;
+        try{
+          if(root.location.origin===new URL(redirectUri()).origin)root.history.replaceState({},'',redirectUri());
+        }catch(e){}
+        initSpotifyPlayer();
+        try{root.dispatchEvent(new Event('dorozhka-spotify-auth'));}catch(e){}
+        return true;
       });
   }
   function token(){
@@ -127,6 +142,14 @@
     }catch(e){spotifyPlayer=null;}
   }
   root.onSpotifyWebPlaybackSDKReady=function(){initSpotifyPlayer();};
+  function handleSpotifyReturn(){
+    exchangeCode().catch(function(e){
+      root.console&&console.warn('Spotify authorization:',e.message);
+      try{root.dispatchEvent(new CustomEvent('dorozhka-spotify-auth-error',{detail:{message:e.message}}));}catch(x){}
+    });
+  }
+  root.addEventListener('focus',handleSpotifyReturn);
+  if(root.document)root.document.addEventListener('visibilitychange',function(){if(!root.document.hidden)handleSpotifyReturn();});
   function playSpotify(id){
     var item=spotifyRecords[String(id)];
     if(!item)return Promise.reject(new Error('Трек Spotify больше не найден. Повтори поиск.'));
@@ -142,5 +165,6 @@
   try{exchangeCode().catch(function(e){root.console&&console.warn('Spotify authorization:',e.message);});}catch(e){}
   if(token())initSpotifyPlayer();
   root.DorozhkaMajorCatalogs={setAppleToken:setAppleToken,appleBase:appleBase,searchApple:searchApple,playApple:playApple,getApple:getApple,
-    setSpotify:setSpotify,spotifyBase:spotifyBase,authorizeSpotify:authorizeSpotify,searchSpotify:searchSpotify,playSpotify:playSpotify,getSpotify:getSpotify};
+    setSpotify:setSpotify,spotifyBase:spotifyBase,authorizeSpotify:authorizeSpotify,searchSpotify:searchSpotify,playSpotify:playSpotify,getSpotify:getSpotify,
+    isSpotifyConnected:function(){return !!token();}};
 }(window));
