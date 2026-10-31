@@ -1329,7 +1329,12 @@ function load(id){
   externalSeq++;externalProvider='';stopExternalPoll();
   if(Native){
     audio.pause();
-    nativeArtwork(it).then(function(art){nativeLive=true;nCall(Native.setQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0}));});
+    var nativeLoadSeq=++nativeQueueSeq;
+    nativeArtwork(it).then(function(art){
+      if(nativeLoadSeq!==nativeQueueSeq||curId!==id)return;
+      nativeLive=true;
+      nCall(Native.setQueue({items:[Object.assign(nItem(id)||{}, {art:art})],index:0,keep:false,repeat:0}));
+    });
   }else{audio.src=it.url;var p=audio.play();if(p&&p.catch)p.catch(function(){});}
   updateNow();markCurrent();setMedia(it);
 }
