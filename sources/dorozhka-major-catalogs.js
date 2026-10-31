@@ -2,7 +2,7 @@
 (function(root){
   'use strict';
   var appleToken='',spotifyClientId='',spotifyRedirect='',spotifyToken='',spotifyDevice='',spotifyPlayer=null;
-  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null;
+  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='';
   var APPLE_TOKEN_KEY='dorozhkaAppleDeveloperToken',SPOTIFY_ID_KEY='dorozhkaSpotifyClientId',SPOTIFY_REDIRECT_KEY='dorozhkaSpotifyRedirectUri';
   function read(key){try{return localStorage.getItem(key)||'';}catch(e){return '';}}
   function write(key,value){try{localStorage.setItem(key,value);}catch(e){throw new Error('Не удалось сохранить настройку на устройстве.');}}
@@ -50,7 +50,7 @@
       catch(e){throw new Error('Проверь Redirect URI.');}
     }
     if(nextId!==spotifyClientId||nextRedirect!==spotifyRedirect){
-      spotifyToken='';spotifyDevice='';
+      spotifyToken='';spotifyDevice='';spotifyLastState=null;spotifyEndedTrack='';
       if(spotifyPlayer){try{spotifyPlayer.disconnect();}catch(e){}spotifyPlayer=null;}
       try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyVerifier','dorozhkaSpotifyState'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
     }
@@ -139,6 +139,23 @@
     try{
       spotifyPlayer=new root.Spotify.Player({name:'Дорожка',getOAuthToken:function(cb){cb(token());},volume:0.8});
       spotifyPlayer.addListener('ready',function(e){spotifyDevice=e.device_id||'';});
+      spotifyPlayer.addListener('player_state_changed',function(state){
+        if(!state){
+          var last=spotifyLastState,lastTrack=last&&last.track_window&&last.track_window.current_track;
+          if(last&&lastTrack&&last.duration>0&&last.position>=last.duration-900&&spotifyEndedTrack!==lastTrack.id){
+            spotifyEndedTrack=lastTrack.id;
+            try{root.dispatchEvent(new CustomEvent('dorozhka-provider-ended',{detail:{provider:'Spotify',trackId:lastTrack.id}}));}catch(e){}
+          }
+          return;
+        }
+        var track=state.track_window&&state.track_window.current_track;
+        if(track&&spotifyEndedTrack&&spotifyEndedTrack!==track.id)spotifyEndedTrack='';
+        if(track&&state.duration>0&&state.position>=state.duration-750&&state.paused&&spotifyEndedTrack!==track.id){
+          spotifyEndedTrack=track.id;
+          try{root.dispatchEvent(new CustomEvent('dorozhka-provider-ended',{detail:{provider:'Spotify',trackId:track.id}}));}catch(e){}
+        }
+        spotifyLastState=state;
+      });
       spotifyPlayer.addListener('not_ready',function(){spotifyDevice='';});
       spotifyPlayer.addListener('initialization_error',function(){spotifyPlayer=null;});
       spotifyPlayer.addListener('authentication_error',function(){spotifyPlayer=null;});
@@ -197,8 +214,12 @@
     }
     if(provider==='Spotify'&&spotifyPlayer){
       return spotifyPlayer.getCurrentState().then(function(state){
-        if(!state)return {currentTime:0,duration:0,paused:true,playing:false};
-        return {currentTime:(state.position||0)/1000,duration:(state.duration||0)/1000,paused:!!state.paused,playing:!state.paused};
+        if(state)spotifyLastState=state;
+        var current=state||spotifyLastState;
+        if(!current)return {currentTime:0,duration:0,paused:true,playing:false};
+        var track=current.track_window&&current.track_window.current_track;
+        var ended=!!(track&&spotifyEndedTrack===track.id);
+        return {currentTime:ended?(current.duration||0)/1000:(current.position||0)/1000,duration:(current.duration||0)/1000,paused:!state||!!state.paused,playing:!!state&&!state.paused};
       });
     }
     return Promise.reject(new Error('Состояние '+provider+' недоступно.'));
