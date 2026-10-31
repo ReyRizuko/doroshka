@@ -50,10 +50,11 @@ GitHub Actions собирает APK в workflow **Build APK**. Артефакт 
 
 ## Локальная сборка
 
-Нужны Node.js 20+, JDK 21 и Android SDK:
+Нужны Node.js 20+, JDK 21 и Android SDK. `npm run check` собирает `www/` из актуального `index.html` и проверяет синтаксис приложения и адаптеров; тот же тест запускается GitHub Actions при изменениях в `feat/multisource-ui`:
 
 ```sh
 npm install
+npm run check
 npm run android
 npx cap open android
 ```
