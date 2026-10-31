@@ -1306,6 +1306,8 @@ function syncExternalState(){
 function startExternalPoll(){stopExternalPoll();externalPoll=setInterval(syncExternalState,700);syncExternalState();}
 function load(id){
   var it=byId(id);if(!it)return;
+  var previousProvider=externalProvider;
+  if(previousProvider&&previousProvider!==it.provider)window.DorozhkaMajorCatalogs.pause(previousProvider).catch(function(){});
   curId=id;
   if(it.provider){
     if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
