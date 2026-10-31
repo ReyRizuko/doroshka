@@ -1998,8 +1998,11 @@ function queueTrack(id){
   if(!curId){playIds([id],id);return;}
   if(baseList.indexOf(curId)<0)baseList.unshift(curId);
   baseList.push(id);
-  if(shuffleOn){if(order.indexOf(curId)<0)buildOrder(curId);order.push(id);pos=order.indexOf(curId);}
-  else{order=baseList.slice();pos=order.indexOf(curId);}
+  if(shuffleOn){
+    var addedId=baseList.pop();
+    if(order.indexOf(curId)<0)buildOrder(curId);
+    order.push(addedId);baseList.push(addedId);pos=order.indexOf(curId);
+  }else{order=baseList.slice();pos=order.indexOf(curId);}
   if(Native&&nativeLive)nativeQueue(true);
   renderHomeShelves();toast('Добавлено в очередь');
 }
