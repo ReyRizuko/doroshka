@@ -48,18 +48,17 @@ npx cap open android
 - `GET /api/v1/tracks/:id/stream` — аудиопоток с поддержкой Range.
 - `POST /api/v1/admin/tracks` — загрузка записи администратором.
 
-### Запуск на сервере
+### Развёртывание без VPS
 
-Нужен VPS или другой хостинг, где можно запускать Docker и хранить постоянные данные. GitHub Pages не запускает backend и не хранит загруженные аудиофайлы.
+Для основного варианта подготовлена конфигурация Cloudflare Workers + D1 + R2. Отдельный постоянно работающий сервер не нужен. Пошаговая настройка и автоматическое развёртывание через GitHub Actions описаны в [cloudflare/README.md](cloudflare/README.md).
 
-```sh
-cd music-server
-cp .env.example .env
-# Замените DOROZHKA_ADMIN_TOKEN на длинный случайный секрет
-docker compose up -d --build
-```
+Понадобится аккаунт Cloudflare, D1 database, R2 bucket и три GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DOROZHKA_ADMIN_TOKEN`. Также нужно вписать выданный Cloudflare ID базы D1 в `wrangler.toml`. После этого запускается workflow **Deploy Doroshka Music API**.
 
-После запуска API будет доступен на порту 8000. Для публичного использования настройте HTTPS reverse proxy и укажите точный origin приложения в `DOROZHKA_CORS_ORIGINS`.
+Cloudflare имеет лимиты бесплатного тарифа и платные условия сверх них; это не безлимитное хранилище. GitHub Pages сам по себе backend и аудиофайлы не хранит.
+
+### Альтернативный запуск через Docker
+
+Старый вариант backend на FastAPI тоже сохранён в `music-server/`. Он подходит для VPS или другого Docker-хостинга, если такой появится.
 
 ### Добавление музыки
 
