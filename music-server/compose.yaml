@@ -1,0 +1,15 @@
+services:
+  doroshka-music:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DOROZHKA_DATA_DIR: /data
+      DOROZHKA_ADMIN_TOKEN: ${DOROZHKA_ADMIN_TOKEN:?Set DOROZHKA_ADMIN_TOKEN in .env}
+      DOROZHKA_CORS_ORIGINS: ${DOROZHKA_CORS_ORIGINS:-*}
+      DOROZHKA_MAX_UPLOAD_BYTES: ${DOROZHKA_MAX_UPLOAD_BYTES:-157286400}
+    volumes:
+      - doroshka_music_data:/data
+volumes:
+  doroshka_music_data:
