@@ -1233,7 +1233,7 @@ function nativeArtwork(it){
     }
     if(blob){encode(blob);return;}
     if(it.coverUrl&&/^data:image\\//i.test(it.coverUrl))return resolve(it.coverUrl);
-    if(it.coverUrl){fetch(it.coverUrl).then(function(r){if(!r.ok)throw new Error('art');return r.blob();}).then(encode).catch(function(){resolve('');});return;}
+    if(it.coverUrl){fetch(it.coverUrl).then(function(r){if(!r.ok)throw new Error('art');return r.blob();}).then(encode).catch(function(){resolve(/^https:\/\//i.test(it.coverUrl)?it.coverUrl:'');});return;}
     resolve('');
   });
 }
