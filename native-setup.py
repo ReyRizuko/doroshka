@@ -646,6 +646,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        // Событие старого MediaPlayer могло попасть в очередь main thread
+                        // до переключения трека. Не даём ему пропустить новый трек.
+                        if (m != mp) return;
                         onTrackEnd();
                     }
                 });
@@ -658,6 +661,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        // Не обрабатываем запоздавшую ошибку уже заменённого плеера.
+                        if (m != mp) return;
                         onTrackError();
                     }
                 });
@@ -671,6 +676,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             handler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (p != mp) return;
                     onTrackError();
                 }
             });
