@@ -745,7 +745,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           <div id="global-status" class="status" aria-live="polite">Введите название трека или исполнителя.</div>
           <div class="provider-filter" role="group" aria-label="Фильтр источников">
             <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все</button>
-            <button class="provider-chip" type="button" data-provider="music" aria-pressed="false">Free To Use</button>
+            <button class="provider-chip" type="button" data-provider="music" aria-pressed="false">Jamendo</button>
             <button class="provider-chip" type="button" data-provider="dorozhka" aria-pressed="false">Audius</button>
             
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
@@ -755,20 +755,21 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 
             <div id="global-key-settings">
               <details class="source-settings" open>
-                <summary>Источник Free To Use</summary>
+                <summary>Подключить каталог Jamendo</summary>
                 <form class="source-form" id="dorozhka-api-form">
-                  <input class="search" id="dorozhka-api-url" type="text" value="Free To Use" aria-label="Источник музыки" readonly>
+                  <input class="search" id="dorozhka-api-url" type="text" inputmode="text" placeholder="Jamendo Client ID" aria-label="Jamendo Client ID">
                   
                   <button class="btn" type="button" id="dorozhka-api-check">Проверить</button>
                 </form>
-                <p class="hint">Подключён автоматически. Каталог Free To Use содержит музыку независимых исполнителей с лицензией Free To Use. Регистрация, ключ API, сервер и банковская карта не нужны. <a href="https://freetouse.com/license" target="_blank" rel="noopener">Условия лицензии</a>.</p>
+                <button class="btn" type="submit">Сохранить Client ID</button>
+                  <p class="hint">Jamendo предоставляет каталог примерно из 500 000 треков независимых исполнителей с лицензиями Creative Commons. Нужен бесплатный Client ID для read-only API. Получить его можно на <a href="https://developer.jamendo.com/" target="_blank" rel="noopener">developer.jamendo.com</a>. Если сервис требует подтверждения возраста, попроси взрослого помочь с регистрацией. API не открывает полный каталог коммерческих релизов.</p>
                 <div id="dorozhka-api-status" class="status" aria-live="polite"></div>
               </details>
             </div>
           </details>
           <div class="global-results">
             <section class="global-result-group" data-provider-group="music">
-              <div class="global-result-title"><h4>Doroshka Music</h4><span>бесплатная музыка независимых исполнителей</span></div>
+              <div class="global-result-title"><h4>Doroshka Music</h4><span>каталог независимых исполнителей Jamendo</span></div>
               <div id="global-music-slot"><div class="status">Укажите публичный GitHub-репозиторий в настройках каталога.</div></div>
             </section>
             <section class="global-result-group" data-provider-group="dorozhka">
@@ -1644,7 +1645,7 @@ function renderMusic(list){
   var slot=$('#global-music-slot');
   if(!list.length){slot.innerHTML='<div class="status">В собственном каталоге совпадений нет.</div>';return;}
   slot.innerHTML=list.map(function(t){
-    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Free To Use'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
+    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Jamendo'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
   }).join('');
 }
 function renderDorozhka(list){
@@ -1662,12 +1663,12 @@ async function runGlobalSearch(q){
   $('#global-q').value=q;
   $('#global-status').textContent='Ищу в собственном каталоге, Audius и аудиоархиве…';
   $('#web-res').innerHTML='';
-  $('#global-music-slot').innerHTML='<div class="status">Ищу в Free To Use…</div>';
+  $('#global-music-slot').innerHTML='<div class="status">Ищу в Jamendo…</div>';
   $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу треки в Audius…</div>';
   var results=await Promise.allSettled([webSearch(q),window.DorozhkaSource.search(q),window.DorozhkaCatalog.search(q)]);
   var wr=results[0],dr=results[1],mr=results[2],notes=[];
-  if(mr.status==='fulfilled'){renderMusic(mr.value);notes.push('Free To Use: '+mr.value.length);}
-  else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Free To Use временно недоступен')+'</div>';notes.push('Free To Use: ошибка');}
+  if(mr.status==='fulfilled'){renderMusic(mr.value);notes.push('Jamendo: '+mr.value.length);}
+  else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Jamendo временно недоступен')+'</div>';notes.push('Jamendo: ошибка');}
   if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Audius: '+dr.value.length);}
   else{$('#global-dorozhka-slot').innerHTML='<div class="status">Audius временно недоступен: '+esc(dr.reason&&dr.reason.message||'ошибка сети')+'</div>';notes.push('Audius: ошибка');}
   if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive);
@@ -1696,18 +1697,18 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
 });
 
 
-/* ---------- Проверка каталога Free To Use ---------- */
+/* ---------- Настройка каталога Jamendo ---------- */
 (function(){
   var input=$('#dorozhka-api-url'),status=$('#dorozhka-api-status');
   input.value=window.DorozhkaCatalog.base();
   $('#dorozhka-api-form').addEventListener('submit',function(e){
     e.preventDefault();
-    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Free To Use подключён автоматически.';}
+    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Client ID Jamendo сохранён на этом устройстве.';toast('Jamendo подключён');}
     catch(err){status.textContent=err.message||'Некорректный адрес';}
   });
   $('#dorozhka-api-check').addEventListener('click',async function(){
-    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Проверяю Free To Use…';var result=await window.DorozhkaCatalog.health();status.textContent=result.ok?'Free To Use API доступен.':'Free To Use API не ответил.';}
-    catch(err){status.textContent=err.message||'Free To Use временно недоступен';}
+    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Проверяю Jamendo…';var result=await window.DorozhkaCatalog.health();status.textContent=result.ok?'Jamendo API доступен. Найдено треков: '+result.tracks:'Jamendo API не ответил.';}
+    catch(err){status.textContent=err.message||'Jamendo временно недоступен';}
   });
 }());
 
