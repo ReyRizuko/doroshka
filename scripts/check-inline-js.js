@@ -54,13 +54,13 @@ if (!fs.existsSync(majorCatalogFile)) {
 const majorCatalogSource = fs.readFileSync(majorCatalogFile, 'utf8');
 new vm.Script(majorCatalogSource, { filename: 'www/sources/dorozhka-major-catalogs.js' });
 
-for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'var externalEnded', 'dorozhka-provider-ended', 'DorozhkaMajorCatalogs.seek']) {
+for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'externalEnded=false', 'dorozhka-provider-ended', 'DorozhkaMajorCatalogs.seek']) {
   if (!html.includes(token)) {
     throw new Error('Unified player integration is missing: ' + token);
   }
 }
 for (const token of ['function play(provider,id)', 'function pause(provider)', 'function resume(provider)',
-  'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)', "addListener('player_state_changed'"]]) {
+  'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)', "addListener('player_state_changed'"]) {
   if (!majorCatalogSource.includes(token)) {
     throw new Error('Major catalog playback API is missing: ' + token);
   }
