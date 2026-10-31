@@ -2,7 +2,7 @@
 (function(root){
   'use strict';
   var appleToken='',spotifyClientId='',spotifyRedirect='',spotifyToken='',spotifyDevice='',spotifyPlayer=null;
-  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='';
+  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='',spotifyReadyWaiters=[];
   var APPLE_TOKEN_KEY='dorozhkaAppleDeveloperToken',SPOTIFY_ID_KEY='dorozhkaSpotifyClientId',SPOTIFY_REDIRECT_KEY='dorozhkaSpotifyRedirectUri';
   function read(key){try{return localStorage.getItem(key)||'';}catch(e){return '';}}
   function write(key,value){try{localStorage.setItem(key,value);}catch(e){throw new Error('Не удалось сохранить настройку на устройстве.');}}
@@ -138,7 +138,11 @@
     if(!t||spotifyPlayer||!root.Spotify||!root.Spotify.Player)return;
     try{
       spotifyPlayer=new root.Spotify.Player({name:'Дорожка',getOAuthToken:function(cb){cb(token());},volume:0.8});
-      spotifyPlayer.addListener('ready',function(e){spotifyDevice=e.device_id||'';});
+      spotifyPlayer.addListener('ready',function(e){
+        spotifyDevice=e.device_id||'';
+        var waiters=spotifyReadyWaiters.splice(0);
+        waiters.forEach(function(w){clearTimeout(w.timer);if(spotifyDevice)w.resolve(spotifyDevice);else w.reject(new Error('Spotify не сообщил ID устройства.'));});
+      });
       spotifyPlayer.addListener('player_state_changed',function(state){
         if(!state){
           var last=spotifyLastState,lastTrack=last&&last.track_window&&last.track_window.current_track;
@@ -156,11 +160,20 @@
         }
         spotifyLastState=state;
       });
-      spotifyPlayer.addListener('not_ready',function(){spotifyDevice='';});
-      spotifyPlayer.addListener('initialization_error',function(){spotifyPlayer=null;});
-      spotifyPlayer.addListener('authentication_error',function(){spotifyPlayer=null;});
-      spotifyPlayer.addListener('account_error',function(){spotifyPlayer=null;});
-      spotifyPlayer.connect().catch(function(){spotifyPlayer=null;});
+      spotifyPlayer.addListener('not_ready',function(){
+        spotifyDevice='';
+        var waiters=spotifyReadyWaiters.splice(0);
+        waiters.forEach(function(w){clearTimeout(w.timer);w.reject(new Error('Spotify-плеер отключился от устройства.'));});
+      });
+      function failSpotifyReady(message){
+        spotifyPlayer=null;spotifyDevice='';
+        var waiters=spotifyReadyWaiters.splice(0);
+        waiters.forEach(function(w){clearTimeout(w.timer);w.reject(new Error(message));});
+      }
+      spotifyPlayer.addListener('initialization_error',function(){failSpotifyReady('Spotify SDK не удалось инициализировать.');});
+      spotifyPlayer.addListener('authentication_error',function(){failSpotifyReady('Spotify не принял авторизацию.');});
+      spotifyPlayer.addListener('account_error',function(){failSpotifyReady('Аккаунт Spotify не поддерживает Web Playback.');});
+      spotifyPlayer.connect().then(function(ok){if(!ok)failSpotifyReady('Spotify Web Playback не подключился.');}).catch(function(){failSpotifyReady('Spotify Web Playback не подключился.');});
     }catch(e){spotifyPlayer=null;}
   }
   root.onSpotifyWebPlaybackSDKReady=function(){initSpotifyPlayer();};
@@ -172,13 +185,29 @@
   }
   root.addEventListener('focus',handleSpotifyReturn);
   if(root.document)root.document.addEventListener('visibilitychange',function(){if(!root.document.hidden)handleSpotifyReturn();});
+  function waitForSpotifyDevice(){
+    if(spotifyDevice)return Promise.resolve(spotifyDevice);
+    initSpotifyPlayer();
+    if(!spotifyPlayer)return Promise.reject(new Error('Spotify Web Playback SDK не готов. Проверьте подключение и авторизацию.'));
+    return new Promise(function(resolve,reject){
+      var waiter={resolve:resolve,reject:reject,timer:null};
+      waiter.timer=setTimeout(function(){
+        var i=spotifyReadyWaiters.indexOf(waiter);
+        if(i>=0)spotifyReadyWaiters.splice(i,1);
+        reject(new Error('Spotify не подготовил устройство за 15 секунд. Попробуйте ещё раз.'));
+      },15000);
+      spotifyReadyWaiters.push(waiter);
+    });
+  }
   function playSpotify(id){
     var item=spotifyRecords[String(id)],uri=item&&item.uri||('spotify:track:'+String(id));
     spotifyEndedTrack='';spotifyLastState=null;
     initSpotifyPlayer();
-    if(!spotifyPlayer||!spotifyDevice)return Promise.reject(new Error('Встроенный Spotify-плеер недоступен на этом устройстве. Открытие внешнего приложения отключено.'));
-    return spotifyPlayer.activateElement().then(function(){
-      return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(spotifyDevice),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[uri]})});
+    return waitForSpotifyDevice().then(function(deviceId){
+      if(!spotifyPlayer)throw new Error('Spotify Web Playback недоступен.');
+      return spotifyPlayer.activateElement().then(function(){
+        return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(deviceId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[uri]})});
+      });
     });
   }
   function play(provider,id){
