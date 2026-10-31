@@ -915,8 +915,8 @@ body{min-height:100vh;padding-top:clamp(14px,3vw,34px);padding-bottom:calc(110px
           <div class="global-results">
             <section class="global-result-group" data-provider-group="own"><div class="global-result-title"><h4>Мой каталог · Doroshka Music</h4><span>собственная библиотека на вашем сервере</span></div><div id="global-own-slot"><div class="status">Подключи свой API в настройках источников.</div></div></section>
 <section class="global-result-group" data-provider-group="music">
-              <div class="global-result-title"><h4>Doroshka Music</h4><span>каталог независимых исполнителей Jamendo</span></div>
-              <div id="global-music-slot"><div class="status">Укажите публичный GitHub-репозиторий в настройках каталога.</div></div>
+              <div class="global-result-title"><h4>Jamendo</h4><span>открытый каталог независимых исполнителей</span></div>
+              <div id="global-music-slot"><div class="status">Подключи Client ID Jamendo в настройках источников.</div></div>
             </section>
             <section class="global-result-group" data-provider-group="dorozhka">
               <div class="global-result-title"><h4>Дорожка · Audius</h4><span>музыкальный каталог с потоковым воспроизведением</span></div>
@@ -1923,7 +1923,7 @@ function renderOwnCatalog(list){
 }
 function renderMusic(list){
   var slot=$('#global-music-slot');
-  if(!list.length){slot.innerHTML='<div class="status">В собственном каталоге совпадений нет.</div>';return;}
+  if(!list.length){slot.innerHTML='<div class="status">В каталоге Jamendo совпадений нет.</div>';return;}
   slot.innerHTML=list.map(function(t){
     return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Jamendo'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-music" aria-label="Добавить в очередь">＋</button></div>';
   }).join('');
