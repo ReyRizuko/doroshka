@@ -1243,12 +1243,12 @@ function buildOrder(startId){
 }
 function playIds(ids,startId){
   if(!ids.length)return;
-  baseList=ids.slice();errRun=0;
-  buildOrder(startId||ids[0]);
-  if(Native&&order.some(function(id){var it=byId(id);return it&&it.provider;})){
+  if(Native&&ids.some(function(id){var it=byId(id);return it&&it.provider;})){
     toast('Смешанная очередь с Apple Music/Spotify пока доступна в веб-версии. Android-движок этих сервисов ещё не подключён.');
     return;
   }
+  baseList=ids.slice();errRun=0;
+  buildOrder(startId||ids[0]);
   if(Native){nativeQueue(false);curId=order[pos];updateNow();markCurrent();return;}
   load(order[pos]);
 }
