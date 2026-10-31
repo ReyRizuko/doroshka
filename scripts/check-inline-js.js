@@ -91,7 +91,7 @@ const nativeGuards = [
   ['modern Android audio focus request', 'new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)'],
   ['audio focus release', 'audio.abandonAudioFocusRequest(focusRequest)'],
   ['stop cleanup uses version-aware focus release', '        abandonFocus();\n        pausedByFocus = false;'],
-  ['focus denial releases Wi-Fi lock', 'if (!requestFocus()) {\n            wantPlay = false;\n            releaseWifiLock();'],
+  ['focus denial releases Wi-Fi lock and updates playback state', 'if (!requestFocus()) {\n            wantPlay = false;\n            handler.removeCallbacks(ticker);\n            releaseWifiLock();\n            updateSession();\n            updateNotification();\n            emitState();'],
   ['repeat-one reacquires audio focus', 'mp.seekTo(0);\n                startPlayback();'],
   ['completed track restarts on resume', 'if (completed) {\n                try { mp.seekTo(0); completed = false;'],
   ['foreground startup failure resets JS player', 'emitError("");\n            PlaybackPlugin.emit("stopped", new JSObject());'],
