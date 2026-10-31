@@ -768,7 +768,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           </details>
           <div class="global-results">
             <section class="global-result-group" data-provider-group="music">
-              <div class="global-result-title"><h4>Doroshka Music</h4><span>собственный серверный каталог</span></div>
+              <div class="global-result-title"><h4>Doroshka Music</h4><span>собственный каталог из GitHub Releases</span></div>
               <div id="global-music-slot"><div class="status">Укажите публичный GitHub-репозиторий в настройках каталога.</div></div>
             </section>
             <section class="global-result-group" data-provider-group="dorozhka">
@@ -1667,7 +1667,7 @@ async function runGlobalSearch(q){
   var results=await Promise.allSettled([webSearch(q),window.DorozhkaSource.search(q),window.DorozhkaCatalog.search(q)]);
   var wr=results[0],dr=results[1],mr=results[2],notes=[];
   if(mr.status==='fulfilled'){renderMusic(mr.value);notes.push('Doroshka Music: '+mr.value.length);}
-  else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Сервер Doroshka Music недоступен')+'</div>';notes.push('Doroshka Music: не подключён');}
+  else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Не удалось прочитать каталог GitHub Releases')+'</div>';notes.push('Doroshka Music: не подключён');}
   if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Audius: '+dr.value.length);}
   else{$('#global-dorozhka-slot').innerHTML='<div class="status">Audius временно недоступен: '+esc(dr.reason&&dr.reason.message||'ошибка сети')+'</div>';notes.push('Audius: ошибка');}
   if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive);
