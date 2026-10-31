@@ -1337,6 +1337,7 @@ function next(auto){
   if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
   if(!order.length)return;
   if(auto&&repeat===2){
+    externalEnded=false;
     if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});
     else if(Native)nCall(Native.seek({ms:0}));
     else{audio.currentTime=0;audio.play();}
@@ -1353,7 +1354,7 @@ function prev(){
   if(Native){if(nativeLive)nCall(Native.prev());return;}
   if(!order.length)return;
   var current=externalProvider?externalPos:(Native?nState.pos/1000:audio.currentTime);
-  if(current>3){if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});else if(Native)nCall(Native.seek({ms:0}));else audio.currentTime=0;return;}
+  if(current>3){externalEnded=false;if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});else if(Native)nCall(Native.seek({ms:0}));else audio.currentTime=0;return;}
   pos=(pos-1+order.length)%order.length;load(order[pos]);
 }
 function toggle(){
