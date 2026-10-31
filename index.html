@@ -1187,11 +1187,14 @@ function markCurrent(){
   document.querySelectorAll('.trk-row[data-lib]').forEach(function(r){r.classList.toggle('on',r.dataset.lib===curId);});
 }
 function setTab(t){
+  if(['lib','sp','web'].indexOf(t)<0)return;
   tab=t;
   ['lib','sp','web'].forEach(function(k){
-    $('#tab-'+k).setAttribute('aria-selected',k===t);
-    var pane=$('#pane-'+k);pane.hidden=k!==t;pane.style.display=k===t?'grid':'none';
+    var tabButton=$('#tab-'+k),pane=$('#pane-'+k);
+    if(tabButton)tabButton.setAttribute('aria-selected',k===t?'true':'false');
+    if(pane){pane.hidden=k!==t;pane.style.display=k===t?'grid':'none';}
   });
+  if(typeof syncBottomNav==='function')syncBottomNav(t);
 }
 
 /* ---------- воспроизведение ---------- */
