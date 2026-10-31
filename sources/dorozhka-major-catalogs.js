@@ -44,12 +44,18 @@
     }).then(function(){return music.play();});
   }
   function setSpotify(clientId,redirectUri){
-    spotifyClientId=clean(clientId);spotifyRedirect=clean(redirectUri);
-    if(spotifyClientId&&!/^[A-Za-z0-9]+$/.test(spotifyClientId))throw new Error('Проверь Spotify Client ID.');
-    if(spotifyRedirect){
-      try{var u=new URL(spotifyRedirect);if(!/^https?:$/.test(u.protocol)&&!/^([a-z][a-z0-9+.-]*):$/i.test(u.protocol))throw new Error();}
+    var nextId=clean(clientId),nextRedirect=clean(redirectUri);
+    if(nextId&&!/^[A-Za-z0-9]+$/.test(nextId))throw new Error('Проверь Spotify Client ID.');
+    if(nextRedirect){
+      try{var u=new URL(nextRedirect);if(!/^https?:$/.test(u.protocol)&&!/^([a-z][a-z0-9+.-]*):$/i.test(u.protocol))throw new Error();}
       catch(e){throw new Error('Проверь Redirect URI.');}
     }
+    if(nextId!==spotifyClientId||nextRedirect!==spotifyRedirect){
+      spotifyToken='';spotifyDevice='';
+      if(spotifyPlayer){try{spotifyPlayer.disconnect();}catch(e){}spotifyPlayer=null;}
+      try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyVerifier','dorozhkaSpotifyState'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
+    }
+    spotifyClientId=nextId;spotifyRedirect=nextRedirect;
     write(SPOTIFY_ID_KEY,spotifyClientId);write(SPOTIFY_REDIRECT_KEY,spotifyRedirect);
   }
   function spotifyBase(){return {clientId:spotifyClientId,redirectUri:spotifyRedirect};}
