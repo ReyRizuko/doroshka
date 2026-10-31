@@ -623,6 +623,38 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 .setting-toggle b{color:#eef1f6;font-size:13px}
 .setting-toggle small{font-size:11px;color:var(--muted)}
 .settings-version{font:10px ui-monospace,monospace;letter-spacing:.16em;color:var(--accent)}
+
+/* Discovery, library collections and listening shelves */
+.discover-section,.home-shelf{display:grid;gap:12px}
+.discover-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.discover-tile{min-height:142px;padding:15px;border-radius:18px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:9px;border:1px solid rgba(255,255,255,.08);transition:transform .18s ease,border-color .18s ease}
+.discover-tile:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22)}
+.discover-tile span{font:10px var(--f-mono);letter-spacing:.1em;opacity:.75}
+.discover-tile b{font-size:20px;line-height:1.05;letter-spacing:-.045em}
+.discover-tile small{font-size:11px;opacity:.72}
+.discover-lime{background:linear-gradient(145deg,#c9f477,#8da95a);color:#18210d}
+.discover-violet{background:linear-gradient(145deg,#8b78d8,#51447e);color:#fff}
+.discover-blue{background:linear-gradient(145deg,#6b9eb4,#365d75);color:#fff}
+.discover-orange{background:linear-gradient(145deg,#d58c5e,#83513b);color:#fff}
+.home-shelf{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 60%),var(--surface)}
+.shelf-link{color:var(--accent);font-size:11px;font-weight:700;white-space:nowrap}
+.shelf-list{display:grid;gap:3px;min-width:0}
+.shelf-track{width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) 28px;gap:10px;align-items:center;padding:6px;border-radius:12px;text-align:left}
+.shelf-track:hover{background:rgba(255,255,255,.045)}
+.shelf-track .thumb{width:42px;height:42px;border-radius:10px}
+.shelf-track .rt b{font-size:12px}
+.shelf-track .rt small{font-size:10px}
+.shelf-play{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgba(197,244,119,.12);color:var(--accent);font-size:11px}
+.library-filters{display:flex;gap:7px;overflow:auto;scrollbar-width:none;padding:1px 0 3px}
+.library-filter{flex:none;padding:9px 13px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.035);color:var(--muted);font-size:12px;font-weight:650}
+.library-filter.active{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.library-filter span{margin-left:4px;opacity:.75;font:10px var(--f-mono)}
+.favorite-btn{font-size:19px;color:#8994a8}
+.favorite-btn.active{color:#ff789b}
+#lib-list .row{grid-template-columns:minmax(0,1fr) auto auto;gap:1px}
+#lib-list .row-main{min-width:0}
+@media(max-width:380px){.discover-tile{min-height:128px;padding:12px}.discover-tile b{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.discover-tile{transition:none}}
 </style>
 </head>
 <body>
@@ -692,9 +724,31 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
             <button data-artist="конец солнечных дней" type="button">конец солнечных дней</button><button data-artist="auratoshi" type="button">auratoshi</button>
           </div>
         </section>
+        <section class="discover-section">
+          <div class="section-head"><div><span class="eyebrow">ОТКРОЙ НОВОЕ</span><h3>Что сейчас по настроению?</h3></div><span class="section-mark">✳</span></div>
+          <div class="discover-grid">
+            <button type="button" data-discover="indie alternative" class="discover-tile discover-lime"><span>01 / INDIE</span><b>Независимая<br>сцена</b><small>Новые имена и релизы</small></button>
+            <button type="button" data-discover="electronic music" class="discover-tile discover-violet"><span>02 / ELECTRONIC</span><b>Электроника</b><small>Ритм и синтезаторы</small></button>
+            <button type="button" data-discover="ambient instrumental" class="discover-tile discover-blue"><span>03 / AMBIENT</span><b>Спокойный фон</b><small>Инструментальная музыка</small></button>
+            <button type="button" data-discover="rock alternative" class="discover-tile discover-orange"><span>04 / GUITARS</span><b>Гитары</b><small>Рок и альтернативная сцена</small></button>
+          </div>
+        </section>
+        <section class="home-shelf">
+          <div class="section-head"><div><span class="eyebrow">ВОЗВРАЩАЙСЯ К МУЗЫКЕ</span><h3>Недавно слушал</h3></div><button class="shelf-link" type="button" data-library-view="history">Вся история ↗</button></div>
+          <div id="recent-list" class="shelf-list"><p class="hint">История появится после первого прослушивания.</p></div>
+        </section>
+        <section class="home-shelf queue-shelf">
+          <div class="section-head"><div><span class="eyebrow">СЛЕДУЮЩИЕ ТРЕКИ</span><h3>Твоя очередь</h3></div><button class="shelf-link" type="button" id="queue-clear">Очистить</button></div>
+          <div id="home-queue" class="shelf-list"><p class="hint">Очередь пока пуста.</p></div>
+        </section>
         <div class="library-toolbar">
           <div><span class="eyebrow">ТВОЯ КОЛЛЕКЦИЯ</span><h3>Медиатека</h3></div>
           <span class="library-count">МОИ ТРЕКИ</span>
+        </div>
+        <div class="library-filters" role="group" aria-label="Фильтр медиатеки">
+          <button type="button" class="library-filter active" data-library-view="all" aria-pressed="true">Все</button>
+          <button type="button" class="library-filter" data-library-view="favorites" aria-pressed="false">Избранное <span id="n-fav">0</span></button>
+          <button type="button" class="library-filter" data-library-view="history" aria-pressed="false">История</button>
         </div>
         <input class="search" id="q" type="search" placeholder="Найти трек или исполнителя" aria-label="Поиск по медиатеке">
         <div class="list" id="lib-list"></div>
@@ -941,6 +995,7 @@ function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;
 var lib=[], lists=[], libVer=0, mcache=new Map(), openLists=new Set();
 var order=[], pos=-1, baseList=[], shuffleOn=false, repeat=0, curId=null, errRun=0;
 var durs=ls.get('dur',{}), tab='lib', filter='', seeking=false, probing=false;
+var favorites=new Set(ls.get('favorites',[])), history=ls.get('history',[]), libraryView='all';
 var Native=null;
 try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){Native=window.Capacitor.registerPlugin('Playback');}}catch(e){}
 var audio=$('#audio');
@@ -1186,16 +1241,48 @@ function visible(){
 function renderLib(){
   var box=$('#lib-list');
   $('#q').hidden=lib.length<8;
+  $('#n-fav').textContent=favorites.size;
+  document.querySelectorAll('[data-library-view]').forEach(function(b){
+    var active=b.dataset.libraryView===libraryView;
+    b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');
+  });
   if(!lib.length){
-    box.innerHTML='<div class="empty-box"><span style="color:var(--accent)">'+svg('note',40)+'</span><h3>Здесь появятся ваши песни</h3><p>Нажмите «Добавить песни» или перетащите файлы на страницу. Подходят mp3, m4a, flac, ogg, wav. Файлы остаются в вашем браузере и запоминаются.</p><button class="btn primary" id="empty-add">'+svg('plus')+'<span>Выбрать файлы</span></button></div>';
+    box.innerHTML='<div class="empty-box"><span style="color:var(--accent)">'+svg('note',40)+'</span><h3>Здесь появятся ваши песни</h3><p>Добавьте аудиофайлы или найдите музыку в открытых каталогах. Ваша медиатека хранится на устройстве.</p><button class="btn primary" id="empty-add">'+svg('plus')+'<span>Выбрать файлы</span></button></div>';
     var b=$('#empty-add');if(b)b.onclick=startAdd;
     return;
   }
   var items=visible();
-  if(!items.length){box.innerHTML='<div class="empty-box"><p>Ничего не найдено</p></div>';return;}
+  if(libraryView==='favorites')items=items.filter(function(it){return favorites.has(it.id);});
+  if(libraryView==='history')items=history.map(byId).filter(Boolean).filter(function(it){return visible().some(function(v){return v.id===it.id;});});
+  if(!items.length){box.innerHTML='<div class="empty-box"><p>'+(libraryView==='favorites'?'В избранном пока пусто. Нажимай на сердечко у понравившихся треков.':libraryView==='history'?'История прослушивания пока пуста.':'Ничего не найдено.')+'</p></div>';return;}
   box.innerHTML=items.map(function(it){
-    return '<div class="row'+(it.id===curId?' on':'')+'" data-id="'+it.id+'"><button class="row-main" data-act="play" aria-label="Играть: '+esc(it.title)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+(it.remote?' · онлайн':'')+'</small></span><span class="dur" data-dur="'+it.id+'">'+(it.dur?fmt(it.dur):'')+'</span></button><button class="x" data-act="del" aria-label="Удалить из плеера">'+svg('close',18)+'</button></div>';
+    var fav=favorites.has(it.id);
+    return '<div class="row'+(it.id===curId?' on':'')+'" data-id="'+esc(it.id)+'"><button class="row-main" data-act="play" aria-label="Играть: '+esc(it.title)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+(it.remote?' · онлайн':'')+'</small></span><span class="dur" data-dur="'+esc(it.id)+'">'+(it.dur?fmt(it.dur):'')+'</span></button><button class="x favorite-btn'+(fav?' active':'')+'" data-act="fav" aria-label="'+(fav?'Убрать из избранного':'В избранное')+'" aria-pressed="'+fav+'">'+(fav?'♥':'♡')+'</button><button class="x" data-act="del" aria-label="Удалить из медиатеки">'+svg('close',18)+'</button></div>';
   }).join('');
+}
+function recordHistory(id){
+  if(!id)return;
+  history=[id].concat(history.filter(function(x){return x!==id;})).slice(0,80);
+  ls.set('history',history);renderHomeShelves();
+}
+function toggleFavorite(id){
+  if(favorites.has(id))favorites.delete(id);else favorites.add(id);
+  ls.set('favorites',Array.from(favorites));renderLib();renderHomeShelves();
+}
+function shelfRow(it,action){
+  return '<button type="button" class="shelf-track" data-shelf-act="'+action+'" data-id="'+esc(it.id)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+'</small></span><span class="shelf-play">▶</span></button>';
+}
+function renderHomeShelves(){
+  var recent=$('#recent-list'),queue=$('#home-queue');
+  if(recent){
+    var recentItems=history.map(byId).filter(Boolean).slice(0,5);
+    recent.innerHTML=recentItems.length?recentItems.map(function(it){return shelfRow(it,'play');}).join(''):'<p class="hint">История появится после первого прослушивания.</p>';
+  }
+  if(queue){
+    var queueIds=order.length?order.slice(Math.max(0,pos+1)):baseList.slice();
+    var queueItems=queueIds.map(byId).filter(Boolean).slice(0,5);
+    queue.innerHTML=queueItems.length?queueItems.map(function(it){return shelfRow(it,'play');}).join(''):'<p class="hint">Очередь пока пуста.</p>';
+  }
 }
 function renderSp(){
   var box=$('#sp-lists');
@@ -1218,7 +1305,7 @@ function renderSp(){
 function renderTabs(){
   $('#n-lib').textContent=lib.length;
 }
-function renderAll(){renderTabs();renderLib();renderSp();markCurrent();}
+function renderAll(){renderTabs();renderLib();renderSp();markCurrent();renderHomeShelves();}
 function markCurrent(){
   document.querySelectorAll('.row').forEach(function(r){r.classList.toggle('on',r.dataset.id===curId);});
   document.querySelectorAll('.trk-row[data-lib]').forEach(function(r){r.classList.toggle('on',r.dataset.lib===curId);});
@@ -1249,7 +1336,8 @@ function playIds(ids,startId){
   }
   baseList=ids.slice();errRun=0;
   buildOrder(startId||ids[0]);
-  if(Native){nativeQueue(false);curId=order[pos];updateNow();markCurrent();return;}
+  if(Native){nativeQueue(false);curId=order[pos];recordHistory(curId);updateNow();markCurrent();renderHomeShelves();return;}
+  renderHomeShelves();
   load(order[pos]);
 }
 function nItem(id){var it=byId(id);return it?{id:it.id,url:it.url,title:it.title,artist:it.artist||'',album:it.album||''}:null;}
@@ -1322,6 +1410,7 @@ function load(id){
   var previousProvider=externalProvider;
   if(previousProvider&&previousProvider!==it.provider)window.DorozhkaMajorCatalogs.pause(previousProvider).catch(function(){});
   curId=id;
+  recordHistory(id);
   if(it.provider){
     if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
     stopExternalPoll();var requestSeq=++externalSeq;externalProvider=it.provider;externalEnded=false;externalPos=0;externalDur=it.dur||0;
@@ -1360,14 +1449,14 @@ function next(auto){
     if(repeat===1||!auto)p=0;
     else{if(externalProvider)window.DorozhkaMajorCatalogs.pause(externalProvider).catch(function(){});else if(Native)nCall(Native.pause());else audio.pause();setPlaying(false);return;}
   }
-  pos=p;load(order[pos]);
+  pos=p;load(order[pos]);renderHomeShelves();
 }
 function prev(){
   if(Native){if(nativeLive)nCall(Native.prev());return;}
   if(!order.length)return;
   var current=externalProvider?externalPos:(Native?nState.pos/1000:audio.currentTime);
   if(current>3){externalEnded=false;if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});else if(Native)nCall(Native.seek({ms:0}));else audio.currentTime=0;return;}
-  pos=(pos-1+order.length)%order.length;load(order[pos]);
+  pos=(pos-1+order.length)%order.length;load(order[pos]);renderHomeShelves();
 }
 function toggle(){
   if(!curId){var v=visible();if(v.length)playIds(v.map(function(x){return x.id;}),v[0].id);return;}
@@ -1501,6 +1590,7 @@ $('#lib-list').addEventListener('click',function(e){
   var btn=e.target.closest('[data-act]');if(!btn)return;
   var row=btn.closest('.row');if(!row)return;var id=row.dataset.id;
   if(btn.dataset.act==='play'){var ids=visible().map(function(x){return x.id;});playIds(ids,id);}
+  else if(btn.dataset.act==='fav'){toggleFavorite(id);}
   else if(btn.dataset.act==='del'){
     if(btn.classList.contains('arm')){removeItem(id);}
     else{btn.classList.add('arm');btn.textContent='Удалить?';setTimeout(function(){if(btn.isConnected){btn.classList.remove('arm');btn.innerHTML=svg('close',18);}},3000);}
@@ -1763,8 +1853,10 @@ function renderMajorCatalog(slotId,list,provider){
     return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="major-queue" data-provider="'+esc(provider)+'" aria-label="Добавить в очередь и воспроизвести: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
   }).join('');
 }
+var globalSearchSeq=0;
 async function runGlobalSearch(q){
   if(!q)return;
+  var seq=++globalSearchSeq;
   $('#global-q').value=q;
   $('#global-status').textContent='Ищу во всех подключённых каталогах…';
   $('#web-res').innerHTML='';
@@ -1774,9 +1866,10 @@ async function runGlobalSearch(q){
   $('#global-spotify-slot').innerHTML='<div class="status">Ищу в Spotify…</div>';
   var results=await Promise.allSettled([
     webSearch(q),window.DorozhkaSource.search(q),window.DorozhkaCatalog.search(q),
-    window.DorozhkaMajorCatalogs.searchApple(q),window.DorozhkaMajorCatalogs.searchSpotify(q)
+    window.DorozhkaMajorCatalogs.searchApple(q),window.DorozhkaMajorCatalogs.searchSpotify(q),youtubeSearch(q)
   ]);
-  var wr=results[0],dr=results[1],mr=results[2],ar=results[3],sr=results[4],notes=[];
+  if(seq!==globalSearchSeq)return;
+  var wr=results[0],dr=results[1],mr=results[2],ar=results[3],sr=results[4],yr=results[5],notes=[];
   if(mr.status==='fulfilled'){renderMusic(mr.value);notes.push('Jamendo: '+mr.value.length);}
   else{$('#global-music-slot').innerHTML='<div class="status">'+esc(mr.reason&&mr.reason.message||'Jamendo временно недоступен')+'</div>';notes.push('Jamendo: ошибка');}
   if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Audius: '+dr.value.length);}
@@ -1787,10 +1880,36 @@ async function runGlobalSearch(q){
   else{$('#global-apple-slot').innerHTML='<div class="status">'+esc(ar.reason&&ar.reason.message||'Apple Music недоступен')+'</div>';notes.push('Apple Music: не подключён');}
   if(sr.status==='fulfilled'){renderMajorCatalog('#global-spotify-slot',sr.value,'Spotify');notes.push('Spotify: '+sr.value.length);}
   else{$('#global-spotify-slot').innerHTML='<div class="status">'+esc(sr.reason&&sr.reason.message||'Spotify недоступен')+'</div>';notes.push('Spotify: не подключён');}
+  if(yr.status==='fulfilled')notes.push('YouTube: '+yr.value);
+  else notes.push('YouTube: ошибка');
   $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
   e.preventDefault();runGlobalSearch($('#global-q').value.trim());
+});
+document.querySelectorAll('[data-library-view]').forEach(function(b){
+  b.addEventListener('click',function(){
+    libraryView=b.dataset.libraryView||'all';
+    if(b.closest('#pane-lib'))renderLib();
+    else{setTab('lib');renderLib();}
+  });
+});
+document.querySelectorAll('[data-discover]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var q=b.dataset.discover||'';
+    setTab('web');syncBottomNav('web');$('#global-q').value=q;runGlobalSearch(q);
+  });
+});
+$('#recent-list').addEventListener('click',function(e){
+  var b=e.target.closest('[data-shelf-act=play]');if(!b)return;
+  var id=b.dataset.id;if(byId(id))playIds([id],id);
+});
+$('#home-queue').addEventListener('click',function(e){
+  var b=e.target.closest('[data-shelf-act=play]');if(!b)return;
+  var id=b.dataset.id;if(byId(id))playIds(order.length?order:baseList,id);
+});
+$('#queue-clear').addEventListener('click',function(){
+  baseList=[];order=[];pos=-1;renderHomeShelves();toast('Очередь очищена');
 });
 document.querySelectorAll('[data-artist]').forEach(function(b){
   b.addEventListener('click',function(){setTab('web');syncBottomNav('web');runGlobalSearch(b.dataset.artist);});
@@ -1894,22 +2013,26 @@ var ytItems={};
 if(ytKey){$('#yt-key-in').value=ytKey;$('#yt-status').textContent='Ключ YouTube API сохранён на этом устройстве.';}
 function ytStatus(t){$('#yt-status').textContent=t;}
 function openSearch(url){var w=window.open(url,'_blank','noopener');if(!w)toast('Разрешите открытие всплывающих окон для перехода к источнику.');}
+var ytSearchSeq=0;
 async function youtubeSearch(q){
-  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан — YouTube пропущен. Добавьте ключ в «Настройки источников и API», чтобы включить поиск в фоне.');return;}
+  var seq=++ytSearchSeq;
+  if(!ytKey){ytLastQuery=q;ytStatus('API key не задан — YouTube пропущен. Добавьте ключ в «Настройки источников и API», чтобы включить поиск в фоне.');return 0;}
   ytStatus('Ищу на YouTube…');$('#yt-results').innerHTML='';$('#yt-player').hidden=true;$('#yt-player').innerHTML='';
   try{
     var u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&safeSearch=moderate&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(ytKey);
     var r=await fetch(u);var j=await r.json();
     if(!r.ok)throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+    if(seq!==ytSearchSeq)return 0;
     var items=(j.items||[]).filter(function(x){return x.id&&x.id.videoId&&x.snippet;});
     items.forEach(function(x){ytItems[x.id.videoId]=x;});
-    if(!items.length){ytStatus('Ничего не найдено. Попробуйте другой запрос.');return;}
+    if(!items.length){ytStatus('Ничего не найдено. Попробуйте другой запрос.');return 0;}
     $('#yt-results').innerHTML=items.map(function(x){
       var id=x.id.videoId,s=x.snippet||{},thumbUrl=(s.thumbnails&&((s.thumbnails.medium||s.thumbnails.high||s.thumbnails.default)||{}).url)||'';
       return '<article class="video-card" data-video="'+esc(id)+'"><img src="'+esc(thumbUrl)+'" alt="" loading="lazy"><div class="video-card-body"><b>'+esc(s.title||'Видео без названия')+'</b><small>'+esc(s.channelTitle||'YouTube')+'</small><div class="video-card-actions"><button class="btn primary" type="button" data-act="yt-play">Смотреть</button><button class="btn" type="button" data-act="yt-open">YouTube</button></div></div></article>';
     }).join('');
     ytStatus('Найдено видео: '+items.length);
-  }catch(e){ytStatus('Ошибка поиска YouTube: '+(e.message||'проверьте API key и квоту'));}
+    return items.length;
+  }catch(e){if(seq===ytSearchSeq)ytStatus('Ошибка поиска YouTube: '+(e.message||'проверьте API key и квоту'));return 0;}
 }
 $('#yt-form').addEventListener('submit',function(e){e.preventDefault();var q=$('#yt-q').value.trim();if(q){ytLastQuery=q;youtubeSearch(q);}});
 $('#yt-key-form').addEventListener('submit',function(e){
