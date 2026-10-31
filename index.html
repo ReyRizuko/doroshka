@@ -1472,7 +1472,7 @@ function load(id){
 }
 function next(auto){
   if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
-  if(!order.length)return;
+  if(!order.length){if(auto)setPlaying(false);return;}
   if(auto&&repeat===2){
     externalEnded=false;
     if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});
@@ -1783,10 +1783,13 @@ function renderIA(docs){
     return '<article class="pl" data-id="'+esc(d.identifier)+'"><div class="pl-head"><h4>'+esc(d.title||d.identifier)+'</h4></div><div class="hint">'+esc(cr||'Автор не указан')+'</div><div class="acts"><button class="btn small" data-act="files">Показать треки</button></div><div class="wfiles"></div></article>';
   }).join('');
 }
+var archiveSearchSeq=0;
 async function webSearch(q){
+  var seq=++archiveSearchSeq;
   webStatus('Ищу в Internet Archive…');
   $('#web-res').innerHTML='';
   var docs=await iaSearchMany(q);
+  if(seq!==archiveSearchSeq)return {archive:docs.length,stale:true};
   if(docs.length)renderIA(docs);
   webStatus(docs.length?'Найдено записей: '+docs.length:'В Internet Archive ничего не найдено.');
   return {archive:docs.length};
