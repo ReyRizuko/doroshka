@@ -820,7 +820,11 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (mp == null || !prepared) return;
         if (!requestFocus()) {
             wantPlay = false;
+            handler.removeCallbacks(ticker);
             releaseWifiLock();
+            updateSession();
+            updateNotification();
+            emitState();
             return;
         }
         try {
