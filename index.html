@@ -586,9 +586,9 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
 #global-dorozhka-slot .rt small{font-size:10px;line-height:1.4;white-space:normal}
 /* Android-first polish */
 :root{--bg:#080a0f;--surface:#151a24;--surface-2:#202838;--line:#30394b;--fg:#f5f6f8;--muted:#a2adbf;--accent:#c9f17c;--accent-fg:#18210e}
-html,body,button,input,select,textarea{font-family:Roboto,"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+html,body,button,input,select,textarea{font-family:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif}
 body{font-size:14px;letter-spacing:-.012em}
-h1,h2,h3,h4,.brand,.tab,.btn{font-family:Roboto,"Noto Sans",system-ui,sans-serif}
+h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif}
 .brand{font-weight:800;letter-spacing:-.065em}
 .btn{border-radius:13px;min-height:44px;font-weight:650}
 .search,input.search{border-radius:15px!important;background:#171e2a!important;border:1px solid #30394a!important}
@@ -1179,7 +1179,7 @@ function renderSp(){
   }).join('');
 }
 function renderTabs(){
-  $('#n-lib').textContent=lib.length;$('#n-sp').textContent=lists.length;
+  $('#n-lib').textContent=lib.length;
 }
 function renderAll(){renderTabs();renderLib();renderSp();markCurrent();}
 function markCurrent(){
