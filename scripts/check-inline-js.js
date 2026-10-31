@@ -93,7 +93,9 @@ const nativeGuards = [
   ['stop cleanup uses version-aware focus release', '        abandonFocus();\n        pausedByFocus = false;'],
   ['focus denial releases Wi-Fi lock', 'if (!requestFocus()) {\n            wantPlay = false;\n            releaseWifiLock();'],
   ['repeat-one reacquires audio focus', 'mp.seekTo(0);\n                startPlayback();'],
-  ['completed track restarts on resume', 'if (completed) {\n                try { mp.seekTo(0); completed = false;']
+  ['completed track restarts on resume', 'if (completed) {\n                try { mp.seekTo(0); completed = false;'],
+  ['foreground startup failure resets JS player', 'emitError("");\n            PlaybackPlugin.emit("stopped", new JSObject());'],
+  ['service teardown resets JS player', 'PlaybackPlugin.emit("stopped", new JSObject());\n        super.onDestroy();']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
