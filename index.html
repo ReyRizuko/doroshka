@@ -1028,7 +1028,7 @@ var durs=ls.get('dur',{}), tab='lib', filter='', seeking=false, probing=false;
 var favorites=new Set(Array.isArray(ls.get('favorites',[]))?ls.get('favorites',[]):[]), history=Array.isArray(ls.get('history',[]))?ls.get('history',[]):[], libraryView='all';
 function savePlaybackState(){
   if(Native)return;
-  ls.set('playbackState',{baseList:baseList.slice(0,300),order:order.slice(0,300),pos:pos,curId:curId,shuffleOn:shuffleOn,repeat:repeat});
+  ls.set('playbackState',{baseList:baseList.slice(0,300),order:order.slice(0,300),pos:pos,curId:curId,shuffleOn:shuffleOn,repeat:repeat,currentTime:(!externalProvider&&audio&&isFinite(audio.currentTime)?audio.currentTime:0)});
 }
 var Native=null;
 try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){Native=window.Capacitor.registerPlugin('Playback');}}catch(e){}
@@ -1553,7 +1553,9 @@ function initMedia(){
 
 /* ---------- события ---------- */
 audio.addEventListener('play',function(){setPlaying(true);});
-audio.addEventListener('pause',function(){setPlaying(false);});
+audio.addEventListener('pause',function(){setPlaying(false);savePlaybackState();});
+window.addEventListener('pagehide',savePlaybackState);
+document.addEventListener('visibilitychange',function(){if(document.hidden)savePlaybackState();});
 audio.addEventListener('ended',function(){next(true);});
 audio.addEventListener('timeupdate',updateTime);
 audio.addEventListener('loadedmetadata',updateTime);
@@ -2178,7 +2180,15 @@ initMedia();setPlaying(false);setTab('lib');renderAll();
       shuffleOn=!!saved.shuffleOn;repeat=Math.max(0,Math.min(2,Number(saved.repeat)||0));
       curId=saved.curId&&order.indexOf(saved.curId)>=0?saved.curId:null;
       pos=curId?order.indexOf(curId):-1;
-      if(curId){var restored=byId(curId);audio.src=restored.url;updateNow();setMedia(restored);}
+      if(curId){
+        var restored=byId(curId),restorePosition=Math.max(0,Number(saved.currentTime)||0);
+        audio.src=restored.url;
+        if(restorePosition>0)audio.addEventListener('loadedmetadata',function restorePlaybackPosition(){
+          audio.removeEventListener('loadedmetadata',restorePlaybackPosition);
+          if(isFinite(audio.duration)&&restorePosition<audio.duration)audio.currentTime=restorePosition;
+        });
+        updateNow();setMedia(restored);
+      }
       $('#b-shuffle').classList.toggle('on',shuffleOn);$('#b-shuffle').setAttribute('aria-pressed',shuffleOn?'true':'false');
       $('#b-repeat').innerHTML=svg(repeat===2?'repeat1':'repeat');$('#b-repeat').classList.toggle('on',repeat>0);
       $('#b-repeat').setAttribute('aria-label',['Повтор: выкл','Повтор: все','Повтор: один трек'][repeat]);
