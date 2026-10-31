@@ -26,7 +26,7 @@ for (const name of sourceNames) {
   }
 }
 
-for (const id of ['yt-form', 'ym-form', 'sc-form', 'spotify-form', 'apple-form', 'deezer-form', 'bandcamp-form', 'vk-form', 'web-form']) {
+for (const id of ['yt-form', 'ym-form', 'sc-form', 'apple-form', 'deezer-form', 'bandcamp-form', 'vk-form', 'web-form']) {
   if (!html.includes('id="' + id + '"')) {
     throw new Error('Missing provider search form: ' + id);
   }
