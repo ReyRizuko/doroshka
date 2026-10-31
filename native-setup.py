@@ -280,6 +280,7 @@ public class PlaybackPlugin extends Plugin {
     public void setEqualizer(PluginCall call) {
         final boolean enabled = call.getBoolean("enabled", true);
         final JSONArray bands = call.getData().optJSONArray("bands");
+        PlaybackService.configureEqualizer(enabled, bands);
         run(call, new Cmd() { public void run(PlaybackService s) { s.setEqualizer(enabled, bands); } });
     }
 
@@ -433,8 +434,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private int index = -1;
     private MediaPlayer mp;
     private Equalizer equalizer;
-    private boolean equalizerEnabled = true;
-    private short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
+    static volatile boolean equalizerEnabled = true;
+    static volatile short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
     private boolean prepared = false;
     private boolean wantPlay = false;
     private boolean pausedByFocus = false;
@@ -852,7 +853,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
     }
 
-    void setEqualizer(boolean enabled, JSONArray bands) {
+    static void configureEqualizer(boolean enabled, JSONArray bands) {
         equalizerEnabled = enabled;
         if (bands != null) {
             short[] values = new short[5];
@@ -861,6 +862,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             }
             equalizerBands = values;
         }
+    }
+
+    void setEqualizer(boolean enabled, JSONArray bands) {
+        configureEqualizer(enabled, bands);
         if (prepared && mp != null) attachEqualizer(mp.getAudioSessionId());
     }
 
