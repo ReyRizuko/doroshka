@@ -1806,7 +1806,9 @@ $('#global-spotify-slot').addEventListener('click',async function(e){
     catch(err){spotifyStatus.textContent=err.message||'Проверь настройки Spotify.';}
   });
   if(api.appleBase())appleStatus.textContent='Developer Token сохранён. Поиск Apple Music доступен.';
-  if(saved.clientId)spotifyStatus.textContent='Spotify Client ID сохранён. Нажми «Войти в Spotify».';
+  if(saved.clientId)spotifyStatus.textContent=api.isSpotifyConnected()?'Spotify подключён.':'Spotify Client ID сохранён. Нажми «Войти в Spotify».';
+  window.addEventListener('dorozhka-spotify-auth',function(){spotifyStatus.textContent='Spotify авторизован. Можно искать музыку.';});
+  window.addEventListener('dorozhka-spotify-auth-error',function(e){spotifyStatus.textContent=e.detail&&e.detail.message||'Ошибка авторизации Spotify.';});
 }());
 // Native Android equalizer
 var EQ_PRESETS={flat:[0,0,0,0,0],bass:[7,5,1,0,2],vocal:[-2,1,5,5,2],treble:[-2,-1,0,5,7],night:[3,1,-1,-2,-3]};
