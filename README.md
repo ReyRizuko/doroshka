@@ -18,7 +18,7 @@ Android-плеер с локальной медиатекой, очередью 
 
 **Spotify**
 1. Создай приложение в Spotify Developer Dashboard и скопируй Client ID.
-2. Укажи точный Redirect URI, который зарегистрирован в настройках приложения Spotify. Для веб-версии это адрес страницы «Дорожки»; он должен совпадать посимвольно.
+2. Для Android укажи Redirect URI `doroshka://spotify-callback` и зарегистрируй его в Spotify Developer Dashboard. Для веб-версии укажи HTTPS-адрес страницы «Дорожки». Redirect URI должен совпадать посимвольно. Spotify продолжает поддерживать custom URI schemes, но для новых интеграций рекомендует HTTPS, где это возможно.
 3. Сохрани настройки и нажми «Войти в Spotify». Используется Authorization Code с PKCE, Client Secret в приложении не хранится.
 4. Поиск идёт по официальному Spotify Web API. Воспроизведение через Web Playback SDK требует Spotify Premium и поддерживаемого браузера. В Android WebView SDK может не поддерживать защищённое воспроизведение; в этом случае откроется официальный трек Spotify.
 
