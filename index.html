@@ -746,7 +746,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           <div class="provider-filter" role="group" aria-label="Фильтр источников">
             <button class="provider-chip active" type="button" data-provider="all" aria-pressed="true">Все</button>
             <button class="provider-chip" type="button" data-provider="dorozhka" aria-pressed="false">Дорожка</button>
-            <button class="provider-chip" type="button" data-provider="audius" aria-pressed="false">Audius</button>
+            
             <button class="provider-chip" type="button" data-provider="archive" aria-pressed="false">Internet Archive</button>
             </div>
           <details class="global-settings">
@@ -756,13 +756,10 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           </details>
           <div class="global-results">
             <section class="global-result-group" data-provider-group="dorozhka">
-              <div class="global-result-title"><h4>Дорожка · открытый каталог</h4><span>собственный поиск по открыто лицензированной музыке</span></div>
+              <div class="global-result-title"><h4>Дорожка · Audius</h4><span>музыкальный каталог с потоковым воспроизведением</span></div>
               <div id="global-dorozhka-slot"><div class="status">Введите запрос — найду доступные полные записи.</div></div>
             </section>
-            <section class="global-result-group" data-provider-group="audius">
-              <div class="global-result-title"><h4>Audius</h4><span>поиск и поток внутри приложения</span></div>
-              <div id="global-audius-slot"><div class="status">Введите запрос для поиска.</div></div>
-            </section>
+            
             <section class="global-result-group" data-provider-group="archive">
               <div class="global-result-title"><h4>Internet Archive</h4><span>аудиоархив · доступность зависит от записей</span></div>
               <div id="global-archive-slot"></div>
@@ -1674,10 +1671,10 @@ document.querySelectorAll('[data-provider]').forEach(function(b){
 
 function renderDorozhka(list){
   var slot=$('#global-dorozhka-slot');
-  if(!list.length){slot.innerHTML='<div class="status">В этом каталоге по запросу нет подходящих записей. Попробуйте другое написание.</div>';return;}
+  if(!list.length){slot.innerHTML='<div class="status">Audius не вернул совпадений. Это не означает, что записи нет в других сервисах.</div>';return;}
   slot.innerHTML=list.map(function(t){
-    var details=[t.creator||'Автор не указан',t.provider||'Открытый каталог',t.license||'лицензия не указана',t.licenseVersion].filter(Boolean).join(' · ');
-    var landing=t.landing&&/^https:\/\//i.test(t.landing)?'<a class="x" href="'+esc(t.landing)+'" target="_blank" rel="noopener" aria-label="Источник и условия использования">↗</a>':'';
+    var details=[t.creator||'Исполнитель не указан','Audius'].join(' · ');
+    var landing=t.permalink&&/^https:\/\//i.test(t.permalink)?'<a class="x" href="'+esc(t.permalink)+'" target="_blank" rel="noopener" aria-label="Открыть трек в Audius">↗</a>':'';
     return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+landing+'</div>';
   }).join('');
 }
@@ -1685,18 +1682,20 @@ function renderDorozhka(list){
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
-  $('#global-status').textContent='Ищу в собственном каталоге, Audius и Internet Archive…';
+  $('#global-status').textContent='Ищу музыку в каталоге Audius и аудиоархиве…';
   $('#web-res').innerHTML='';
-  $('#global-audius-slot').innerHTML='<div class="status">Ищу треки и профили исполнителей…</div>';
-  $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу записи с открытой лицензией…</div>';
-  var results=await Promise.allSettled([webSearch(q),audiusSearch(q),window.DorozhkaSource.search(q)]);
-  var wr=results[0],ar=results[1],dr=results[2],notes=[];
-  if(dr.status==='fulfilled'){renderDorozhka(dr.value);notes.push('Дорожка: '+dr.value.length);}
-  else{$('#global-dorozhka-slot').innerHTML='<div class="status">Каталог временно недоступен.</div>';notes.push('Дорожка: ошибка');}
-  if(ar.status==='fulfilled'&&ar.value.length){renderAudius(ar.value);notes.push('Audius: '+ar.value.length);}
-  else{$('#global-audius-slot').innerHTML='<div class="status">'+(ar.status==='rejected'?'Audius временно недоступен.':'Совпадений нет.')+'</div>';notes.push('Audius: 0');}
+  $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу треки в Audius…</div>';
+  var results=await Promise.allSettled([webSearch(q),window.DorozhkaSource.search(q)]);
+  var wr=results[0],dr=results[1],notes=[];
+  if(dr.status==='fulfilled'){
+    renderDorozhka(dr.value);
+    notes.push('Audius: '+dr.value.length);
+  }else{
+    $('#global-dorozhka-slot').innerHTML='<div class="status">Audius временно недоступен: '+esc(dr.reason&&dr.reason.message||'ошибка сети')+'</div>';
+    notes.push('Audius: ошибка');
+  }
   if(wr.status==='fulfilled')notes.push('Internet Archive: '+wr.value.archive);
-  else notes.push('Архивные источники временно недоступны.');
+  else notes.push('Internet Archive: ошибка');
   $('#global-status').textContent=notes.join(' · ');
 }
 $('#global-form').addEventListener('submit',function(e){
@@ -1709,7 +1708,7 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
   var b=e.target.closest('[data-act=dsplay]');if(!b)return;
   var row=b.closest('[data-ds]');if(!row)return;
   var t=window.DorozhkaSource.get(row.dataset.ds);if(!t)return;
-  var id=await addRemoteRec({id:'ds'+t.id,name:'dorozhka:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
+  var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
   playIds(sorted().map(function(x){return x.id;}),id);
 });
 $('#global-audius-slot').addEventListener('click',async function(e){
