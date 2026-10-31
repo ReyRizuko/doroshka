@@ -1396,9 +1396,10 @@ function setMedia(it){
 function initMedia(){
   if(!('mediaSession' in navigator))return;
   var set=function(a,f){try{navigator.mediaSession.setActionHandler(a,f);}catch(e){}};
-  set('play',function(){audio.play();});set('pause',function(){audio.pause();});
+  set('play',function(){if(externalProvider)window.DorozhkaMajorCatalogs.resume(externalProvider).then(function(){setPlaying(true);}).catch(function(){});else audio.play();});
+  set('pause',function(){if(externalProvider)window.DorozhkaMajorCatalogs.pause(externalProvider).then(function(){setPlaying(false);}).catch(function(){});else audio.pause();});
   set('previoustrack',prev);set('nexttrack',function(){next(false);});
-  set('seekto',function(d){if(d&&d.seekTime!=null)audio.currentTime=d.seekTime;});
+  set('seekto',function(d){if(d&&d.seekTime!=null){if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,d.seekTime).catch(function(){});else audio.currentTime=d.seekTime;}});
 }
 
 /* ---------- события ---------- */
