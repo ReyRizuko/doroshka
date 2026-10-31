@@ -62,6 +62,17 @@ for (const token of ['function queueMajorTrack', 'function syncExternalState', '
     throw new Error('Unified player integration is missing: ' + token);
   }
 }
+
+for (const token of ['function recordHistory(id)', 'function toggleFavorite(id)', 'function renderHomeShelves()', 'function queueTrack(id)', 'var globalSearchSeq=0', 'youtubeSearch(q)', 'data-discover=', 'data-library-view=', 'data-act=queue-music', 'data-act=queue-ds']) {
+  if (!html.includes(token)) {
+    throw new Error('Music platform feature is missing: ' + token);
+  }
+}
+for (const id of ['recent-list', 'home-queue', 'queue-clear', 'n-fav']) {
+  if (!html.includes('id="' + id + '"')) {
+    throw new Error('Music platform UI is missing: ' + id);
+  }
+}
 for (const token of ['function play(provider,id)', 'function pause(provider)', 'function resume(provider)',
   'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)',
   'function waitForSpotifyDevice()', 'spotifyReadyWaiters', 'function refreshSpotifyToken()', 'function ensureSpotifyToken()', 'function hasSpotifySession()', 'spotifyAuthGeneration', 'generation!==spotifyAuthGeneration', 'dorozhkaSpotifyRefreshToken', "addListener('ready'", "addListener('player_state_changed'"]) {
