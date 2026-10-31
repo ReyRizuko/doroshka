@@ -29,7 +29,7 @@ for (const name of sourceNames) {
 }
 
 for (const id of ['yt-form', 'ym-form', 'sc-form', 'apple-form', 'deezer-form', 'bandcamp-form', 'vk-form', 'web-form',
-  'apple-token-form', 'spotify-config-form', 'spotify-connect', 'global-apple-slot', 'global-spotify-slot']) {
+  'own-catalog-form', 'own-catalog-check', 'global-own-slot', 'apple-token-form', 'spotify-config-form', 'spotify-connect', 'global-apple-slot', 'global-spotify-slot']) {
   if (!html.includes('id="' + id + '"')) {
     throw new Error('Missing provider search form: ' + id);
   }
@@ -40,6 +40,17 @@ if (!fs.existsSync(sourceFile)) {
   throw new Error('Dorozhka source adapter is missing from www/sources');
 }
 new vm.Script(fs.readFileSync(sourceFile, 'utf8'), { filename: 'www/sources/dorozhka-source.js' });
+
+const ownCatalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-own-catalog.js');
+if (!fs.existsSync(ownCatalogFile)) throw new Error('First-party Doroshka catalog adapter is missing from www/sources');
+const ownCatalogSource = fs.readFileSync(ownCatalogFile, 'utf8');
+new vm.Script(ownCatalogSource, { filename: 'www/sources/dorozhka-own-catalog.js' });
+for (const token of ['function search(query)', 'function health()', 'DoroshkaOwnCatalog', 'credentials:\\'omit\\'']) {
+  if (!ownCatalogSource.includes(token)) throw new Error('First-party catalog capability is missing: ' + token);
+}
+if (!html.includes('window.DorozhkaOwnCatalog.search(q)') || !html.includes('function renderOwnCatalog(list)')) {
+  throw new Error('First-party catalog is not connected to unified search and results.');
+}
 
 const catalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-catalog.js');
 if (!fs.existsSync(catalogFile)) {
