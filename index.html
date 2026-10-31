@@ -1565,7 +1565,7 @@ $('#global-audius-slot').addEventListener('click',async function(e){
 });
 /* Встроенный официальный Spotify Embed для ссылок на плейлисты. */
 function spotifyPlaylistId(raw){
-  var s=String(raw||'').trim(),m=s.match(/(?:open\\.spotify\\.com\\/(?:intl-[a-z]{2}\\/)?playlist\\/|spotify:playlist:)([A-Za-z0-9]+)/i);
+  var s=String(raw||'').trim(),m=s.match(/(?:open\.spotify\.com\/(?:intl-[a-z]{2}\/)?playlist\/|spotify:playlist:)([A-Za-z0-9]+)/i);
   return m?m[1]:'';
 }
 $('#spotify-embed-form').addEventListener('submit',function(e){
