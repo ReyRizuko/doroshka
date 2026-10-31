@@ -1,7 +1,9 @@
-// Копирует jsmediatags и шрифты в www, чтобы приложение работало без интернета.
+// Копирует jsmediatags, шрифты, источники и точку входа в Capacitor webDir.
 const fs = require('fs');
 const path = require('path');
-const root = path.join(__dirname, '..');
+
+// Этот скрипт лежит в корне репозитория, поэтому __dirname и есть root.
+const root = __dirname;
 const www = path.join(root, 'www');
 fs.mkdirSync(path.join(www, 'vendor'), { recursive: true });
 fs.mkdirSync(path.join(www, 'fonts'), { recursive: true });
@@ -30,13 +32,13 @@ for (const [pkg, family, weights] of FONTS) {
     const src = path.join(dir, name);
     if (!fs.existsSync(src)) { console.warn('нет шрифта', name); continue; }
     fs.copyFileSync(src, path.join(www, 'fonts', name));
-    css += `@font-face{font-family:'${family}';font-style:normal;font-weight:${w};font-display:swap;src:url(fonts/${name}) format('woff2');unicode-range:${RANGES[sub]}}\n`;
+    css += `@font-face{font-family:'${family}';font-style:normal;font-weight:${w};font-display:swap;src:url(fonts/${name}) format('woff2');unicode-range:${RANGES[sub]}}\\n`;
   }
 }
 fs.writeFileSync(path.join(www, 'fonts.css'), css);
 const sources = path.join(root, 'sources');
 if (fs.existsSync(sources)) {
-  fs.cpSync(sources, path.join(www, 'sources'), { recursive: true });
+  fs.cpSync(sources, path.join(www, 'sources'), { recursive: true, force: true });
   console.log('Скопированы собственные источники музыки');
 }
 console.log('Готово: ресурсы скопированы в www');
