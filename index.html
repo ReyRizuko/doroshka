@@ -660,6 +660,14 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 .global-result-group .row{grid-template-columns:minmax(0,1fr) auto}
 .global-result-group .row .x{margin:0 4px;width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.045);font-size:21px}
 .global-result-group .row .x:hover{background:rgba(197,244,119,.12);color:var(--accent)}
+
+/* Personal playlists */
+.queue-save-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.queue-save-form[hidden]{display:none}
+.queue-save-toggle{justify-self:start;padding:5px 0}
+.playlist-shelf .pl{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.07);padding:13px}
+.playlist-list{display:grid;gap:10px}
+.playlist-list .hint{margin:0}
 </style>
 </head>
 <body>
@@ -745,6 +753,15 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
         <section class="home-shelf queue-shelf">
           <div class="section-head"><div><span class="eyebrow">СЛЕДУЮЩИЕ ТРЕКИ</span><h3>Твоя очередь</h3></div><button class="shelf-link" type="button" id="queue-clear">Очистить</button></div>
           <div id="home-queue" class="shelf-list"><p class="hint">Очередь пока пуста.</p></div>
+          <form id="queue-save-form" class="queue-save-form" hidden>
+            <input class="search" id="queue-name" maxlength="60" placeholder="Название плейлиста" aria-label="Название нового плейлиста" required>
+            <button class="btn primary small" type="submit">Сохранить</button>
+          </form>
+          <button type="button" class="shelf-link queue-save-toggle" id="queue-save">Сохранить очередь как плейлист ＋</button>
+        </section>
+        <section class="home-shelf playlist-shelf">
+          <div class="section-head"><div><span class="eyebrow">ТВОИ ПОДБОРКИ</span><h3>Плейлисты</h3></div><button class="shelf-link" type="button" id="playlist-import">Импорт Spotify ↗</button></div>
+          <div id="sp-lists" class="playlist-list"><p class="hint">Создай плейлист из очереди или импортируй свой список Spotify.</p></div>
         </section>
         <div class="library-toolbar">
           <div><span class="eyebrow">ТВОЯ КОЛЛЕКЦИЯ</span><h3>Медиатека</h3></div>
@@ -784,7 +801,6 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
     
   </section>
   <section class="settings-card"><span class="eyebrow">О ПРИЛОЖЕНИИ</span><h3>Дорожка</h3><p>Локальная медиатека, открытые музыкальные каталоги и нативный Android-плеер.</p><div class="settings-version">ANDROID · AUDIO ENGINE</div></section>
-  <div id="sp-lists" hidden></div>
 </div>
 
 <div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
@@ -1193,7 +1209,7 @@ async function importLists(files){
       total+=p.tracks.length;names.push(p.name);
     }
   }
-  if(names.length){mcache.clear();openLists.clear();setTab('sp');renderAll();toast('Загружено плейлистов: '+names.length+' · треков: '+total);}
+  if(names.length){mcache.clear();openLists.clear();setTab('lib');renderAll();$('#sp-lists').scrollIntoView({behavior:'smooth',block:'nearest'});toast('Загружено плейлистов: '+names.length+' · треков: '+total);}
 }
 async function removeList(id){
   lists=lists.filter(function(l){return l.id!==id;});
@@ -1292,7 +1308,7 @@ function renderHomeShelves(){
 }
 function renderSp(){
   var box=$('#sp-lists');
-  if(!lists.length){box.innerHTML='';return;}
+  if(!lists.length){box.innerHTML='<p class="hint">Плейлистов пока нет. Сохрани очередь или импортируй CSV/JSON из Spotify.</p>';return;}
   box.innerHTML=lists.map(function(pl){
     var m=matches(pl),found=m.filter(Boolean).length,total=pl.tracks.length,open=openLists.has(pl.id);
     var rows='';
@@ -1916,6 +1932,21 @@ $('#home-queue').addEventListener('click',function(e){
 });
 $('#queue-clear').addEventListener('click',function(){
   baseList=[];order=[];pos=-1;renderHomeShelves();toast('Очередь очищена');
+});
+$('#playlist-import').addEventListener('click',function(){$('#f-list').click();});
+$('#queue-save').addEventListener('click',function(){
+  var form=$('#queue-save-form');form.hidden=!form.hidden;
+  if(!form.hidden)$('#queue-name').focus();
+});
+$('#queue-save-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var name=$('#queue-name').value.trim(),ids=(order.length?order:baseList).slice();
+  if(!name){toast('Укажи название плейлиста');return;}
+  var tracks=ids.map(byId).filter(Boolean).map(function(it){return {title:it.title,artist:it.artist||'',album:it.album||''};});
+  if(!tracks.length){toast('Очередь пуста');return;}
+  var rec={id:uid(),name:name,tracks:tracks};
+  lists.unshift(rec);await idb('lists','readwrite',function(store){return store.put(rec);});
+  mcache.clear();$('#queue-name').value='';$('#queue-save-form').hidden=true;renderSp();toast('Плейлист сохранён');
 });
 document.querySelectorAll('[data-artist]').forEach(function(b){
   b.addEventListener('click',function(){setTab('web');syncBottomNav('web');runGlobalSearch(b.dataset.artist);});
