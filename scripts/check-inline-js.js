@@ -85,7 +85,11 @@ const nativeGuards = [
   ['native service startup drain', 'for (Runnable command : pendingCommands) handler.post(command);'],
   ['startup failure cleanup', 'static void cancelStart()'],
   ['plugin teardown cleanup', 'protected void handleOnDestroy()'],
-  ['plugin instance release', 'if (instance == this) instance = null;']
+  ['plugin instance release', 'if (instance == this) instance = null;'],
+  ['native command dispatch result', 'static boolean post(Runnable r)'],
+  ['native command rejection when service is absent', 'call.reject("Android-плеер ещё не запущен")'],
+  ['modern Android audio focus request', 'new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)'],
+  ['audio focus release', 'audio.abandonAudioFocusRequest(focusRequest)']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
