@@ -1714,6 +1714,16 @@ document.querySelectorAll('[data-provider]').forEach(function(b){
   b.addEventListener('click',function(){setProviderFilter(b.dataset.provider);});
 });
 
+function renderDorozhka(list){
+  var slot=$('#global-dorozhka-slot');
+  if(!list.length){slot.innerHTML='<div class="status">В этом каталоге по запросу нет подходящих записей. Попробуйте другое написание.</div>';return;}
+  slot.innerHTML=list.map(function(t){
+    var details=[t.creator||'Автор не указан',t.provider||'Открытый каталог',t.license||'лицензия не указана',t.licenseVersion].filter(Boolean).join(' · ');
+    var landing=t.landing&&/^https:\/\//i.test(t.landing)?'<a class="x" href="'+esc(t.landing)+'" target="_blank" rel="noopener" aria-label="Источник и условия использования">↗</a>':'';
+    return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+landing+'</div>';
+  }).join('');
+}
+
 async function runGlobalSearch(q){
   if(!q)return;
   $('#global-q').value=q;
