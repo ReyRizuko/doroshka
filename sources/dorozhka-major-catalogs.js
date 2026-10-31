@@ -2,7 +2,7 @@
 (function(root){
   'use strict';
   var appleToken='',spotifyClientId='',spotifyRedirect='',spotifyToken='',spotifyDevice='',spotifyPlayer=null;
-  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='',spotifyReadyWaiters=[];
+  var appleRecords=Object.create(null),spotifyRecords=Object.create(null),appleMusic=null,spotifyLastState=null,spotifyEndedTrack='',spotifyReadyWaiters=[],spotifyRefreshPromise=null;
   var APPLE_TOKEN_KEY='dorozhkaAppleDeveloperToken',SPOTIFY_ID_KEY='dorozhkaSpotifyClientId',SPOTIFY_REDIRECT_KEY='dorozhkaSpotifyRedirectUri';
   function read(key){try{return localStorage.getItem(key)||'';}catch(e){return '';}}
   function write(key,value){try{localStorage.setItem(key,value);}catch(e){throw new Error('Не удалось сохранить настройку на устройстве.');}}
@@ -52,7 +52,7 @@
     if(nextId!==spotifyClientId||nextRedirect!==spotifyRedirect){
       spotifyToken='';spotifyDevice='';spotifyLastState=null;spotifyEndedTrack='';
       if(spotifyPlayer){try{spotifyPlayer.disconnect();}catch(e){}spotifyPlayer=null;}
-      try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyVerifier','dorozhkaSpotifyState'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
+      try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyRefreshToken','dorozhkaSpotifyVerifier','dorozhkaSpotifyState'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
     }
     spotifyClientId=nextId;spotifyRedirect=nextRedirect;
     write(SPOTIFY_ID_KEY,spotifyClientId);write(SPOTIFY_REDIRECT_KEY,spotifyRedirect);
@@ -97,7 +97,7 @@
       .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error_description||j.error||'Spotify token error');return j;});})
       .then(function(j){
         spotifyToken=j.access_token;
-        try{sessionStorage.setItem('dorozhkaSpotifyAccessToken',spotifyToken);sessionStorage.setItem('dorozhkaSpotifyTokenExpiry',String(Date.now()+Number(j.expires_in||3600)*1000));sessionStorage.removeItem('dorozhkaSpotifyVerifier');sessionStorage.removeItem('dorozhkaSpotifyState');}catch(e){}
+        try{sessionStorage.setItem('dorozhkaSpotifyAccessToken',spotifyToken);sessionStorage.setItem('dorozhkaSpotifyTokenExpiry',String(Date.now()+Number(j.expires_in||3600)*1000));if(j.refresh_token)sessionStorage.setItem('dorozhkaSpotifyRefreshToken',j.refresh_token);sessionStorage.removeItem('dorozhkaSpotifyVerifier');sessionStorage.removeItem('dorozhkaSpotifyState');}catch(e){}
         try{
           if(root.location.origin===new URL(redirectUri()).origin)root.history.replaceState({},'',redirectUri());
         }catch(e){}
@@ -107,19 +107,53 @@
       });
   }
   function token(){
-    if(spotifyToken)return spotifyToken;
     try{
       var expiry=Number(sessionStorage.getItem('dorozhkaSpotifyTokenExpiry')||0);
-      if(expiry>Date.now()+30000)spotifyToken=sessionStorage.getItem('dorozhkaSpotifyAccessToken')||'';
+      if(expiry>Date.now()+30000){
+        if(!spotifyToken)spotifyToken=sessionStorage.getItem('dorozhkaSpotifyAccessToken')||'';
+        return spotifyToken;
+      }
     }catch(e){}
-    return spotifyToken;
+    spotifyToken='';
+    return '';
   }
+  function refreshSpotifyToken(){
+    if(spotifyRefreshPromise)return spotifyRefreshPromise;
+    var refresh='';
+    try{refresh=sessionStorage.getItem('dorozhkaSpotifyRefreshToken')||'';}catch(e){}
+    if(!refresh||!spotifyClientId)return Promise.reject(new Error('Сессия Spotify истекла. Войди в Spotify ещё раз.'));
+    var body=new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh,client_id:spotifyClientId});
+    spotifyRefreshPromise=fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
+      .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error_description||j.error||'Spotify token refresh failed');return j;});})
+      .then(function(j){
+        spotifyToken=j.access_token||'';
+        if(!spotifyToken)throw new Error('Spotify не вернул новый access token.');
+        try{
+          sessionStorage.setItem('dorozhkaSpotifyAccessToken',spotifyToken);
+          sessionStorage.setItem('dorozhkaSpotifyTokenExpiry',String(Date.now()+Number(j.expires_in||3600)*1000));
+          if(j.refresh_token)sessionStorage.setItem('dorozhkaSpotifyRefreshToken',j.refresh_token);
+        }catch(e){}
+        return spotifyToken;
+      })
+      .catch(function(error){
+        if(error&&/invalid_grant|invalid refresh token/i.test(error.message||'')){
+          try{['dorozhkaSpotifyAccessToken','dorozhkaSpotifyTokenExpiry','dorozhkaSpotifyRefreshToken'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}
+          spotifyToken='';
+        }
+        throw error;
+      })
+      .then(function(value){spotifyRefreshPromise=null;return value;},function(error){spotifyRefreshPromise=null;throw error;});
+    return spotifyRefreshPromise;
+  }
+  function ensureSpotifyToken(){var current=token();return current?Promise.resolve(current):refreshSpotifyToken();}
   function spotifyRequest(url,options){
-    options=options||{};options.headers=options.headers||{};options.headers.Authorization='Bearer '+token();
-    return fetch(url,options).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error((j.error&&j.error.message)||('Spotify HTTP '+r.status));return j;});});
+    return ensureSpotifyToken().then(function(accessToken){
+      options=options||{};options.headers=options.headers||{};options.headers.Authorization='Bearer '+accessToken;
+      return fetch(url,options).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error((j.error&&j.error.message)||('Spotify HTTP '+r.status));return j;});});
+    });
   }
   function searchSpotify(query){
-    var q=clean(query);if(!token())return Promise.reject(new Error('Подключи Spotify в настройках и войди в аккаунт.'));
+    var q=clean(query);
     if(!q)return Promise.resolve([]);
     return spotifyRequest('https://api.spotify.com/v1/search?type=track&limit=20&q='+encodeURIComponent(q)).then(function(data){
       var tracks=data.tracks&&data.tracks.items||[];
@@ -137,7 +171,7 @@
     var t=token();
     if(!t||spotifyPlayer||!root.Spotify||!root.Spotify.Player)return;
     try{
-      spotifyPlayer=new root.Spotify.Player({name:'Дорожка',getOAuthToken:function(cb){cb(token());},volume:0.8});
+      spotifyPlayer=new root.Spotify.Player({name:'Дорожка',getOAuthToken:function(cb){ensureSpotifyToken().then(cb).catch(function(){cb('');});},volume:0.8});
       spotifyPlayer.addListener('ready',function(e){
         spotifyDevice=e.device_id||'';
         var waiters=spotifyReadyWaiters.splice(0);
@@ -202,8 +236,7 @@
   function playSpotify(id){
     var item=spotifyRecords[String(id)],uri=item&&item.uri||('spotify:track:'+String(id));
     spotifyEndedTrack='';spotifyLastState=null;
-    initSpotifyPlayer();
-    return waitForSpotifyDevice().then(function(deviceId){
+    return ensureSpotifyToken().then(function(){initSpotifyPlayer();return waitForSpotifyDevice();}).then(function(deviceId){
       if(!spotifyPlayer)throw new Error('Spotify Web Playback недоступен.');
       return spotifyPlayer.activateElement().then(function(){
         return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(deviceId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[uri]})});
