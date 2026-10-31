@@ -184,14 +184,15 @@ public class PlaybackPlugin extends Plugin {
     }
 
     private void run(PluginCall call, final Cmd cmd) {
-        PlaybackService.post(new Runnable() {
+        boolean accepted = PlaybackService.post(new Runnable() {
             @Override
             public void run() {
                 PlaybackService s = PlaybackService.instance;
                 if (s != null) cmd.run(s);
             }
         });
-        call.resolve();
+        if (accepted) call.resolve();
+        else call.reject("Android-плеер ещё не запущен");
     }
 
     @PluginMethod
@@ -407,6 +408,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.Icon;
 import android.util.Base64;
 import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
@@ -460,6 +462,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private int errRun = 0;
     private MediaSession session;
     private AudioManager audio;
+    private AudioFocusRequest focusRequest;
     private WifiManager.WifiLock wifiLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -492,14 +495,15 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
     }
 
-    static void post(Runnable r) {
+    static boolean post(Runnable r) {
         synchronized (POST_LOCK) {
             PlaybackService s = instance;
-            if (s != null) {
-                s.handler.post(r);
-            } else if (startingService) {
+            if (s != null) return s.handler.post(r);
+            if (startingService) {
                 pendingCommands.add(r);
+                return true;
             }
+            return false;
         }
     }
 
@@ -786,10 +790,25 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private boolean requestFocus() {
         try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                if (focusRequest == null) {
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build();
+                    focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                            .setAudioAttributes(attributes)
+                            .setAcceptsDelayedFocusGain(false)
+                            .setWillPauseWhenDucked(true)
+                            .setOnAudioFocusChangeListener(this, handler)
+                            .build();
+                }
+                return audio.requestAudioFocus(focusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+            }
             return audio.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
                     == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         } catch (Exception e) {
-            return true;
+            return false;
         }
     }
 
@@ -817,7 +836,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private void abandonFocus() {
         try {
-            if (audio != null) audio.abandonAudioFocus(this);
+            if (audio != null) {
+                if (Build.VERSION.SDK_INT >= 26 && focusRequest != null) audio.abandonAudioFocusRequest(focusRequest);
+                else audio.abandonAudioFocus(this);
+            }
         } catch (Exception ignored) {
         }
     }
