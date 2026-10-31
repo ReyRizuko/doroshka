@@ -149,6 +149,7 @@
     return request;
   }
   function ensureSpotifyToken(){var current=token();return current?Promise.resolve(current):refreshSpotifyToken();}
+  function hasSpotifySession(){if(token())return true;try{return !!sessionStorage.getItem('dorozhkaSpotifyRefreshToken');}catch(e){return false;}}
   function spotifyRequest(url,options){
     return ensureSpotifyToken().then(function(accessToken){
       options=options||{};options.headers=options.headers||{};options.headers.Authorization='Bearer '+accessToken;
@@ -297,5 +298,5 @@
   if(token())initSpotifyPlayer();
   root.DorozhkaMajorCatalogs={setAppleToken:setAppleToken,appleBase:appleBase,searchApple:searchApple,playApple:playApple,getApple:getApple,
     setSpotify:setSpotify,spotifyBase:spotifyBase,authorizeSpotify:authorizeSpotify,searchSpotify:searchSpotify,playSpotify:playSpotify,getSpotify:getSpotify,play:play,pause:pause,resume:resume,seek:seek,setVolume:setVolume,getState:getState,
-    isSpotifyConnected:function(){return !!token();}};
+    isSpotifyConnected:hasSpotifySession};
 }(window));
