@@ -148,6 +148,12 @@ public class PlaybackPlugin extends Plugin {
         instance = this;
     }
 
+    @Override
+    protected void handleOnDestroy() {
+        if (instance == this) instance = null;
+        super.handleOnDestroy();
+    }
+
     static void emit(String event, JSObject data) {
         PlaybackPlugin p = instance;
         if (p != null) p.notifyListeners(event, data);
