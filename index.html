@@ -1300,10 +1300,15 @@ function syncExternalState(){
     if(seq!==externalSeq||provider!==externalProvider)return;
     externalPos=state.currentTime||0;externalDur=state.duration||0;
     setPlaying(!!state.playing);updateTime();
-    if(externalDur>0&&externalPos>=externalDur-0.35&&!state.playing)next(true);
+    if(provider==='Apple Music'&&externalDur>0&&externalPos>=externalDur-0.35&&!state.playing)next(true);
   }).catch(function(){});
 }
 function startExternalPoll(){stopExternalPoll();externalPoll=setInterval(syncExternalState,700);syncExternalState();}
+window.addEventListener('dorozhka-provider-ended',function(event){
+  var detail=event&&event.detail,it=curId?byId(curId):null;
+  if(!detail||detail.provider!==externalProvider||!it||it.provider!==detail.provider||String(it.providerTrackId)!==String(detail.trackId))return;
+  next(true);
+});
 function load(id){
   var it=byId(id);if(!it)return;
   var previousProvider=externalProvider;
@@ -1311,13 +1316,13 @@ function load(id){
   curId=id;
   if(it.provider){
     if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
-    stopExternalPoll();externalSeq++;externalProvider=it.provider;externalPos=0;externalDur=it.dur||0;
+    stopExternalPoll();var requestSeq=++externalSeq;externalProvider=it.provider;externalPos=0;externalDur=it.dur||0;
     audio.pause();updateNow();markCurrent();setMedia(it);setPlaying(false);
     window.DorozhkaMajorCatalogs.setVolume(it.provider,+$('#vol').value).catch(function(){});
     window.DorozhkaMajorCatalogs.play(it.provider,it.providerTrackId).then(function(){
-      if(externalProvider===it.provider){setPlaying(true);startExternalPoll();}
+      if(externalSeq===requestSeq&&externalProvider===it.provider&&curId===id){setPlaying(true);startExternalPoll();}
     }).catch(function(err){
-      if(externalProvider===it.provider){externalProvider='';stopExternalPoll();setPlaying(false);toast(err&&err.message||('Не удалось запустить '+it.provider));}
+      if(externalSeq===requestSeq&&externalProvider===it.provider&&curId===id){externalProvider='';stopExternalPoll();setPlaying(false);toast(err&&err.message||('Не удалось запустить '+it.provider));}
     });
     return;
   }
