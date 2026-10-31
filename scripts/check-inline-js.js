@@ -6,6 +6,8 @@ const vm = require('node:vm');
 
 const file = path.join(__dirname, '..', 'www', 'index.html');
 const html = fs.readFileSync(file, 'utf8');
+const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+if (html !== sourceHtml) throw new Error('www/index.html is stale; run npm run prepare-assets first.');
 const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter((match) => !/\bsrc\s*=/.test(match[1]))
   .map((match) => match[2]);
@@ -52,13 +54,13 @@ if (!fs.existsSync(majorCatalogFile)) {
 const majorCatalogSource = fs.readFileSync(majorCatalogFile, 'utf8');
 new vm.Script(majorCatalogSource, { filename: 'www/sources/dorozhka-major-catalogs.js' });
 
-for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'DorozhkaMajorCatalogs.seek']) {
+for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'var externalEnded', 'dorozhka-provider-ended', 'DorozhkaMajorCatalogs.seek']) {
   if (!html.includes(token)) {
     throw new Error('Unified player integration is missing: ' + token);
   }
 }
 for (const token of ['function play(provider,id)', 'function pause(provider)', 'function resume(provider)',
-  'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)']) {
+  'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)', "addListener('player_state_changed'"]]) {
   if (!majorCatalogSource.includes(token)) {
     throw new Error('Major catalog playback API is missing: ' + token);
   }
