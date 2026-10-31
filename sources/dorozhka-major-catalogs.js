@@ -37,8 +37,7 @@
     });
   }
   function playApple(id){
-    var music=appleInstance(),item=appleRecords[String(id)];
-    if(!item)return Promise.reject(new Error('Трек Apple Music больше не найден. Повтори поиск.'));
+    var music=appleInstance();
     return Promise.resolve(music.isAuthorized?true:music.authorize()).then(function(){
       return music.setQueue({song:String(id)});
     }).then(function(){return music.play();});
@@ -157,12 +156,11 @@
   root.addEventListener('focus',handleSpotifyReturn);
   if(root.document)root.document.addEventListener('visibilitychange',function(){if(!root.document.hidden)handleSpotifyReturn();});
   function playSpotify(id){
-    var item=spotifyRecords[String(id)];
-    if(!item)return Promise.reject(new Error('Трек Spotify больше не найден. Повтори поиск.'));
+    var item=spotifyRecords[String(id)],uri=item&&item.uri||('spotify:track:'+String(id));
     initSpotifyPlayer();
     if(!spotifyPlayer||!spotifyDevice)return Promise.reject(new Error('Встроенный Spotify-плеер недоступен на этом устройстве. Открытие внешнего приложения отключено.'));
     return spotifyPlayer.activateElement().then(function(){
-      return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(spotifyDevice),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[item.uri]})});
+      return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(spotifyDevice),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[uri]})});
     });
   }
   function play(provider,id){
