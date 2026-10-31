@@ -34,12 +34,13 @@
       license: LICENSES
     });
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = controller ? setTimeout(function () { controller.abort(); }, 7500) : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
     return fetch(API + '?' + params.toString(), {
       headers: { Accept: 'application/json' },
+      cache: 'no-store',
       signal: controller ? controller.signal : undefined
     }).then(function (response) {
-      if (!response.ok) throw new Error('Openverse HTTP ' + response.status);
+      if (!response.ok) throw new Error('Openverse HTTP ' + response.status + (response.status === 429 ? ' (лимит запросов)' : ''));
       return response.json();
     }).then(function (payload) {
       return Array.isArray(payload.results) ? payload.results : [];
