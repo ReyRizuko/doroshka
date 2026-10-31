@@ -22,7 +22,7 @@ Android-плеер с локальной медиатекой, очередью 
 3. Сохрани настройки и нажми «Войти в Spotify». Используется Authorization Code с PKCE, Client Secret в приложении не хранится.
 4. Поиск идёт по официальному Spotify Web API. Воспроизведение через Web Playback SDK требует Spotify Premium и поддерживаемого браузера. В Android WebView SDK может не поддерживать защищённое воспроизведение; в этом случае откроется официальный трек Spotify.
 
-Документация: https://developer.spotify.com/documentation/web-api и https://developer.spotify.com/documentation/web-playback-sdk.
+Документация: https://developer.spotify.com/documentation/web-api и https://developer.spotify.com/documentation/web-playback-sdk. Spotify запрещает коммерческие streaming-интеграции без отдельного письменного разрешения; перед публикацией проверь актуальные Developer Terms.
 
 Ни один из этих сервисов не гарантирует наличие абсолютно каждой существующей записи. Доступность зависит от страны, лицензий, подписки и настроек платформы. Приложение не обходит авторизацию, региональные ограничения или DRM.
 
