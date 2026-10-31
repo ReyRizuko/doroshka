@@ -5,7 +5,7 @@
   "scripts": {
     "prepare-assets": "node prepare.js",
     "android": "npm run prepare-assets && npx cap sync android && python3 native-setup.py",
-    "check": "npm run prepare-assets && node scripts/check-inline-js.js"
+    "check": "npm run prepare-assets && node scripts/check-inline-js.js && python3 -c \"import ast,pathlib; ast.parse(pathlib.Path('native-setup.py').read_text())\""
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
