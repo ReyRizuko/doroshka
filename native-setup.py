@@ -1346,6 +1346,35 @@ with open(MANIFEST, "w", encoding="utf-8") as f:
     f.write(m)
 print("AndroidManifest.xml: разрешения и компоненты проверены")
 
+# ---- резервные зеркала Maven Central для нестабильной доступности основного хоста ----
+def add_maven_mirrors(path):
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        source = f.read()
+    if "repo1.maven.org/maven2" in source and "maven-central.storage-download.googleapis.com/maven2" in source:
+        return
+    if path.endswith(".kts"):
+        mirror_lines = (
+            '        maven("https://repo1.maven.org/maven2")\\n'
+            '        maven("https://maven-central.storage-download.googleapis.com/maven2/")\\n'
+        )
+    else:
+        mirror_lines = (
+            '        maven { url "https://repo1.maven.org/maven2" }\\n'
+            '        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }\\n'
+        )
+    source, count = re.subn(r"(\\brepositories\\s*\\{)", lambda match: match.group(1) + "\\n" + mirror_lines, source)
+    if count:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(source)
+        print("Добавлены резервные Maven-репозитории:", os.path.basename(path))
+    else:
+        print("В Gradle-файле не найден блок repositories:", os.path.basename(path))
+
+for gradle_name in ("settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts"):
+    add_maven_mirrors(os.path.join(ROOT, "android", gradle_name))
+
 # ---- Spotify OAuth deep link ----
 if 'android:host="spotify-callback"' not in m:
     activity_tags = list(re.finditer(r'<activity\b[^>]*>', m))
