@@ -75,7 +75,7 @@
   function setBase(value){
     var v=String(value||'').trim().replace(/^https?:\/\//i,'').replace(/\.git$/i,'').replace(/\/+$/,'');
     if(v && !validRepo(v)) throw new Error('Укажи публичный репозиторий в формате владелец/репозиторий');
-    localStorage.setItem('dorozhkaMusicGithubRepo',v);cache=null;cacheAt=0;
+    localStorage.setItem('dorozhkaMusicGithubRepo',v);cache=null;cacheAt=0;records=Object.create(null);
   }
   root.DorozhkaCatalog={name:'Doroshka Music',search:search,get:get,health:health,setBase:setBase,base:base};
 }(window));
