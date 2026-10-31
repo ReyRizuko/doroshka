@@ -431,7 +431,6 @@ body{background:radial-gradient(ellipse at 50% -18%,rgba(255,255,255,.12),transp
 .source-chip[aria-pressed=true]{background:#292a30;color:#fff}.source-intro{background:linear-gradient(135deg,rgba(255,255,255,.06),transparent 65%),#121318}
 .mini{background:rgba(16,17,21,.96);border-color:rgba(255,255,255,.12);backdrop-filter:blur(24px)}.mini-prog{background:#eee}
 .toast{background:#eee;color:#111}
-.spotify-embed-card{display:grid;gap:12px;padding:17px;border:1px solid rgba(255,255,255,.1);border-radius:19px;background:linear-gradient(140deg,rgba(255,255,255,.055),transparent 55%),#111216}
 .spotify-embed-head{display:grid;gap:5px}.spotify-embed-head h3{margin:0;font:600 16px var(--f-display);letter-spacing:-.03em}.spotify-embed-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .spotify-embed-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.spotify-embed-form .search{min-width:0}
 .spotify-embed-frame{overflow:hidden;border-radius:14px;background:#18191d;min-height:152px}.spotify-embed-frame iframe{display:block;width:100%;height:352px;border:0}
@@ -717,7 +716,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:Roboto,"Noto Sans",system-ui,sans-serif
   </section>
   <section class="settings-card"><span class="eyebrow">ПОВЕДЕНИЕ</span><h3>Плеер</h3>
     <label class="setting-toggle"><span><b>Запоминать громкость</b><small>Сохранять уровень на устройстве</small></span><input type="checkbox" id="remember-volume" checked></label>
-    <label class="setting-toggle"><span><b>Плавная смена треков</b><small>Постепенное изменение громкости при переключении</small></span><input type="checkbox" id="soft-transition" checked></label>
+    
   </section>
   <section class="settings-card"><span class="eyebrow">О ПРИЛОЖЕНИИ</span><h3>Дорожка</h3><p>Локальная медиатека, открытые музыкальные каталоги и нативный Android-плеер.</p><div class="settings-version">ANDROID · AUDIO ENGINE</div></section>
   <div id="sp-lists" hidden></div>
@@ -1345,7 +1344,10 @@ var sk=$('#seek');
 sk.addEventListener('input',function(){seeking=true;sk.style.setProperty('--p',(sk.value/10)+'%');var d=isFinite(audio.duration)?audio.duration:0;$('#t-cur').textContent=fmt(d*sk.value/1000);});
 sk.addEventListener('change',function(){var d=isFinite(audio.duration)?audio.duration:0;if(d)audio.currentTime=d*sk.value/1000;seeking=false;});
 var vol=$('#vol');
-vol.addEventListener('input',function(){audio.volume=+vol.value;vol.style.setProperty('--p',(vol.value*100)+'%');ls.set('vol',+vol.value);});
+var rememberVolume=ls.get('rememberVolume',true);
+$('#remember-volume').checked=rememberVolume;
+vol.addEventListener('input',function(){audio.volume=+vol.value;vol.style.setProperty('--p',(vol.value*100)+'%');if($('#remember-volume').checked)ls.set('vol',+vol.value);});
+$('#remember-volume').addEventListener('change',function(){ls.set('rememberVolume',this.checked);if(!this.checked){try{localStorage.removeItem('vol');}catch(e){}}else ls.set('vol',+vol.value);});
 $('#b-play').onclick=toggle;$('#m-play').onclick=toggle;
 $('#b-next').onclick=function(){next(false);};$('#m-next').onclick=function(){next(false);};
 $('#b-prev').onclick=prev;
@@ -1875,7 +1877,7 @@ setSource('youtube');
 
 /* ---------- запуск ---------- */
 document.querySelectorAll('[data-i]').forEach(function(e){e.innerHTML=svg(e.dataset.i,+e.dataset.sz||22);});
-var v0=ls.get('vol',1);audio.volume=v0;vol.value=v0;vol.style.setProperty('--p',(v0*100)+'%');
+var v0=ls.get('rememberVolume',true)?ls.get('vol',1):1;audio.volume=v0;vol.value=v0;vol.style.setProperty('--p',(v0*100)+'%');
 initMedia();setPlaying(false);setTab('lib');renderAll();
 (async function(){
   db=await openDB();
