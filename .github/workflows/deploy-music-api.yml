@@ -16,11 +16,19 @@ jobs:
         with:
           node-version: 22
       - run: npm install --global wrangler
+      - name: Check Worker JavaScript syntax
+        run: node --check cloudflare/worker.js
       - name: Apply D1 migrations
         run: wrangler d1 migrations apply doroshka-music --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Set upload authorization secret
+        run: printf '%s' "$DOROZHKA_ADMIN_TOKEN" | wrangler secret put ADMIN_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DOROZHKA_ADMIN_TOKEN: ${{ secrets.DOROZHKA_ADMIN_TOKEN }}
       - name: Deploy Worker
         run: wrangler deploy
         env:
