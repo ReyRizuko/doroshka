@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "prepare-assets": "node scripts/prepare.js",
+    "prepare-assets": "node prepare.js",
     "android": "npm run prepare-assets && npx cap sync android && python3 native-setup.py",
     "check": "npm run prepare-assets && node scripts/check-inline-js.js"
   },
