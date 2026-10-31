@@ -63,7 +63,7 @@ for (const token of ['function queueMajorTrack', 'function syncExternalState', '
   }
 }
 
-for (const token of ['function recordHistory(id)', 'function toggleFavorite(id)', 'function renderHomeShelves()', 'function queueTrack(id)', 'var globalSearchSeq=0', 'youtubeSearch(q)', 'data-discover=', 'data-library-view=', 'queue-music', 'queue-ds', 'data-act=iaqueue', 'function queueTrack(id)']) {
+for (const token of ['function recordHistory(id)', 'function toggleFavorite(id)', 'function renderHomeShelves()', 'function queueTrack(id)', 'var globalSearchSeq=0', 'youtubeSearch(q)', 'data-discover=', 'data-library-view=', 'queue-music', 'queue-ds', 'iaqueue', 'function queueTrack(id)']) {
   if (!html.includes(token)) {
     throw new Error('Music platform feature is missing: ' + token);
   }
