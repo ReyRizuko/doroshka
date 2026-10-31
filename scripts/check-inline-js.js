@@ -73,12 +73,12 @@ if (majorCatalogSource.includes("root.open(item.url")) {
 const nativeSetupFile = path.join(__dirname, '..', 'native-setup.py');
 const nativeSetupSource = fs.readFileSync(nativeSetupFile, 'utf8');
 for (const token of [
-  'if (m != mp) return;\\n                        onTrackEnd();',
-  'if (m != mp) return;\\n                        onTrackError();',
-  'if (p != mp) return;\\n                    onTrackError();'
+  'if (m != mp) return;\n                        onTrackEnd();',
+  'if (m != mp) return;\n                        onTrackError();',
+  'if (p != mp) return;\n                    onTrackError();'
 ]) {
   if (!nativeSetupSource.includes(token)) {
-    throw new Error('Native playback stale-callback guard is missing: ' + token.split('\\n').pop().trim());
+    throw new Error('Native playback stale-callback guard is missing: ' + token.split('\n').pop().trim());
   }
 }
 if (!nativeSetupSource.includes('if (m != mp) return;')) {
