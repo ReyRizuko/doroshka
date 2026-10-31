@@ -276,6 +276,13 @@ public class PlaybackPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setEqualizer(PluginCall call) {
+        final boolean enabled = call.getBoolean("enabled", true);
+        final JSONArray bands = call.getData().optJSONArray("bands");
+        run(call, new Cmd() { public void run(PlaybackService s) { s.setEqualizer(enabled, bands); } });
+    }
+
+    @PluginMethod
     public void setArtwork(PluginCall call) {
         final String id = call.getString("id", "");
         final String art = call.getString("art", "");
@@ -391,6 +398,7 @@ import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
+import android.media.audiofx.Equalizer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.net.Uri;
@@ -423,6 +431,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private final ArrayList<Item> queue = new ArrayList<>();
     private int index = -1;
     private MediaPlayer mp;
+    private Equalizer equalizer;
+    private boolean equalizerEnabled = true;
+    private short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
     private boolean prepared = false;
     private boolean wantPlay = false;
     private boolean pausedByFocus = false;
@@ -574,6 +585,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private void releasePlayer() {
         handler.removeCallbacks(ticker);
+        if (equalizer != null) {
+            try { equalizer.setEnabled(false); equalizer.release(); } catch (Exception ignored) {}
+            equalizer = null;
+        }
         if (mp != null) {
             try {
                 mp.setOnPreparedListener(null);
@@ -608,6 +623,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 prepared = true;
                 errRun = 0;
                 m.setVolume(volume, volume);
+                attachEqualizer(m.getAudioSessionId());
                 if (wantPlay) startPlayback();
                 updateSession();
                 updateNotification();
@@ -831,6 +847,43 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                     updateNotification();
                 }
                 return;
+            }
+        }
+    }
+
+    void setEqualizer(boolean enabled, JSONArray bands) {
+        equalizerEnabled = enabled;
+        if (bands != null) {
+            short[] values = new short[5];
+            for (int i = 0; i < values.length; i++) {
+                values[i] = (short) Math.max(-1200, Math.min(1200, bands.optInt(i, 0)));
+            }
+            equalizerBands = values;
+        }
+        if (prepared && mp != null) attachEqualizer(mp.getAudioSessionId());
+    }
+
+    private void attachEqualizer(int audioSessionId) {
+        try {
+            if (equalizer != null) {
+                equalizer.setEnabled(false);
+                equalizer.release();
+                equalizer = null;
+            }
+            equalizer = new Equalizer(0, audioSessionId);
+            short count = equalizer.getNumberOfBands();
+            short[] range = equalizer.getBandLevelRange();
+            for (short band = 0; band < count; band++) {
+                int source = count <= 1 ? 2 : Math.round((band * 4f) / (count - 1));
+                int level = equalizerBands[Math.max(0, Math.min(4, source))];
+                level = Math.max(range[0], Math.min(range[1], level));
+                equalizer.setBandLevel(band, (short) level);
+            }
+            equalizer.setEnabled(equalizerEnabled);
+        } catch (Exception e) {
+            if (equalizer != null) {
+                try { equalizer.release(); } catch (Exception ignored) {}
+                equalizer = null;
             }
         }
     }
