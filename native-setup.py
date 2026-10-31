@@ -737,10 +737,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (repeat == 2) {
             try {
                 mp.seekTo(0);
-                mp.start();
-                handler.removeCallbacks(ticker);
-                handler.post(ticker);
-            } catch (Exception ignored) {
+                startPlayback();
+            } catch (Exception e) {
+                onTrackError();
             }
             return;
         }
@@ -816,11 +815,13 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (mp == null || !prepared) return;
         if (!requestFocus()) {
             wantPlay = false;
+            releaseWifiLock();
             return;
         }
         try {
             mp.start();
         } catch (Exception e) {
+            onTrackError();
             return;
         }
         handler.removeCallbacks(ticker);
