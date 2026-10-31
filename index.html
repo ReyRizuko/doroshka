@@ -1337,7 +1337,7 @@ function renderSp(){
         if(it){
           return '<li><button class="trk-row'+(it.id===curId?' on':'')+'" data-act="playtrk" data-lib="'+it.id+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(t.artist)+'</small></span><span class="tag">есть</span></button></li>';
         }
-        return '<li><div class="trk-row miss"><span class="thumb">'+svg('note',18)+'</span><span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(t.artist)+'</small></span><span class="tag">нет файла</span></div></li>';
+        return '<li><div class="trk-row miss"><span class="thumb">'+svg('note',18)+'</span><span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(t.artist)+'</small></span><span class="tag">нет файла</span><button class="btn small" data-act="search-missing" data-query="'+esc((t.artist?t.artist+' ':'')+t.title)+'">Найти</button></div></li>';
       }).join('')+'</ul>';
     }
     return '<article class="pl" data-pl="'+pl.id+'"><div class="pl-head"><h4>'+esc(pl.name)+'</h4><span>найдено '+found+' из '+total+'</span></div><div class="bar" aria-hidden="true"><i style="width:'+(total?Math.round(found/total*100):0)+'%"></i></div><div class="acts"><button class="btn small primary" data-act="plplay"'+(found?'':' disabled style="opacity:.5;cursor:default"')+'>'+svg('play',16)+'<span>Играть</span></button><button class="btn small" data-act="pltoggle">'+(open?'Скрыть список':'Показать список')+'</button>'+(found<total?'<button class="btn small" data-act="plcopy">Копировать ненайденные</button>':'')+'<button class="btn small" data-act="pldel">Удалить</button></div>'+rows+'</article>';
@@ -1656,6 +1656,8 @@ $('#sp-lists').addEventListener('click',function(e){
   }else if(act==='plcopy'){
     var txt=pl.tracks.filter(function(t,i){return !m[i];}).map(function(t){return (t.artist?t.artist+' — ':'')+t.title;}).join('\n');
     copyText(txt);
+  }else if(act==='search-missing'){
+    var query=btn.dataset.query||'';setTab('web');syncBottomNav('web');$('#global-q').value=query;runGlobalSearch(query);
   }else if(act==='pldel'){
     if(btn.classList.contains('arm'))removeList(pl.id);
     else{btn.classList.add('arm');btn.textContent='Точно удалить?';setTimeout(function(){if(btn.isConnected){btn.classList.remove('arm');btn.textContent='Удалить';}},3000);}
