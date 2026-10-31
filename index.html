@@ -585,6 +585,39 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
 #global-dorozhka-slot .thumb{width:48px;height:48px;border-radius:11px}
 #global-dorozhka-slot .rt b{font-size:13px}
 #global-dorozhka-slot .rt small{font-size:10px;line-height:1.4;white-space:normal}
+/* Android-first polish */
+:root{--bg:#080a0f;--surface:#151a24;--surface-2:#202838;--line:#30394b;--fg:#f5f6f8;--muted:#a2adbf;--accent:#c9f17c;--accent-fg:#18210e}
+html,body,button,input,select,textarea{font-family:Roboto,"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+body{font-size:14px;letter-spacing:-.012em}
+h1,h2,h3,h4,.brand,.tab,.btn{font-family:Roboto,"Noto Sans",system-ui,sans-serif}
+.brand{font-weight:800;letter-spacing:-.065em}
+.btn{border-radius:13px;min-height:44px;font-weight:650}
+.search,input.search{border-radius:15px!important;background:#171e2a!important;border:1px solid #30394a!important}
+.row,.pl,.global-result-group,.how,.settings-card{border-radius:18px!important;border:1px solid rgba(255,255,255,.075)!important;background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 55%),#131925!important}
+.library-hero{border-radius:28px!important;overflow:hidden}
+.bottom-nav{left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border:1px solid rgba(255,255,255,.12);border-radius:23px;padding:7px 9px calc(7px + env(safe-area-inset-bottom,0px));background:rgba(19,24,35,.88);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.mini{bottom:calc(75px + env(safe-area-inset-bottom,0px));border-radius:18px}
+.settings-hero{padding:22px 4px 8px}
+.settings-hero h2{font-size:34px;letter-spacing:-.065em;margin:8px 0}
+.settings-hero p,.settings-card p{color:var(--muted);line-height:1.55;margin:7px 0 0;font-size:13px}
+.settings-card{padding:18px;display:grid;gap:14px}
+.settings-card h3{font-size:22px;letter-spacing:-.05em;margin:5px 0 0}
+.settings-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.switch-row,.setting-toggle{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px}
+.switch-row input,.setting-toggle input{accent-color:var(--accent);width:20px;height:20px}
+.eq-presets{display:flex;gap:7px;overflow:auto;padding:2px 0 6px;scrollbar-width:none}
+.eq-presets button{flex:none;padding:9px 13px;border-radius:999px;background:#222b3a;color:#bac4d4;border:1px solid #344054;font-size:12px;font-weight:650}
+.eq-presets button.active{background:var(--accent);color:#18210e;border-color:transparent}
+.eq-bands{display:grid;gap:12px}
+.eq-bands label{display:grid;grid-template-columns:58px minmax(0,1fr) 48px;align-items:center;gap:10px;font-size:11px;color:#b9c3d3;font-variant-numeric:tabular-nums}
+.eq-bands input{width:100%;accent-color:var(--accent)}
+.eq-bands output{text-align:right;color:#f2f4f7;font-weight:650}
+.settings-note{font-size:11px!important;color:#8e9aaf!important}
+.setting-toggle{justify-content:space-between;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
+.setting-toggle span{display:grid;gap:4px}
+.setting-toggle b{color:#eef1f6;font-size:13px}
+.setting-toggle small{font-size:11px;color:var(--muted)}
+.settings-version{font:10px ui-monospace,monospace;letter-spacing:.16em;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -625,7 +658,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
     <section class="side">
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" id="tab-lib" aria-selected="true"><span class="tab-icon">♫</span><span>Медиатека</span><small id="n-lib">0</small></button>
-        <button class="tab" role="tab" id="tab-sp" aria-selected="false"><span class="tab-icon">◉</span><span>Spotify</span><small id="n-sp">0</small></button>
+        <button class="tab" role="tab" id="tab-sp" aria-selected="false"><span class="tab-icon">◉</span><span>Настройки</span><small>⚙</small></button>
         <button class="tab" role="tab" id="tab-web" aria-selected="false"><span class="tab-icon">⌕</span><span>Обзор</span></button>
       </div>
       <div class="status" id="status" aria-live="polite"></div>
@@ -662,37 +695,35 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
         <div class="list" id="lib-list"></div>
       </div>
 
-      <div id="pane-sp" role="tabpanel" hidden style="display:grid;gap:12px">
-        <div class="how">
-          <h3>Каталог Spotify</h3>
-          <p>Поиск открывается на официальной странице Spotify. Встроенный поиск через Web API временно отключён: Spotify требует Premium у владельца приложения в Developer Mode. Авторизация в «Дорожке» для этого не нужна.</p>
-          <form class="webform" id="spotify-track-form">
-            <input class="search" id="spotify-track-q" type="search" placeholder="Название трека или исполнитель" aria-label="Поиск в Spotify" autocomplete="off">
-            <button class="btn primary" type="submit">Открыть поиск</button>
-          </form>
-          <p class="hint">Воспроизведение и доступность треков определяются самим Spotify и вашей учётной записью.</p>
-        </div>
-        <section class="spotify-embed-card" aria-label="Плейлист Spotify">
-          <div class="spotify-embed-head"><span class="eyebrow">ТВОЯ КОЛЛЕКЦИЯ</span><h3>Открыть мой плейлист</h3><p>Вставь ссылку на плейлист Spotify — официальный плеер появится прямо здесь.</p></div>
-          <form class="spotify-embed-form" id="spotify-embed-form"><input class="search" id="spotify-playlist-url" type="url" inputmode="url" placeholder="https://open.spotify.com/playlist/…" aria-label="Ссылка на плейлист Spotify" autocomplete="off"><button class="btn primary" type="submit">Подключить</button></form>
-          <div class="spotify-embed-frame" id="spotify-embed-frame"><div class="empty-box" style="margin:10px;border:0"><h3>Плейлист пока не выбран</h3><p>Вставь ссылку на свой плейлист, чтобы открыть встроенный плеер Spotify.</p></div></div>
-          <div class="spotify-embed-actions" id="spotify-embed-actions" hidden><a class="btn small" id="spotify-embed-open" target="_blank" rel="noopener">Открыть в Spotify</a><button class="btn small" type="button" id="spotify-embed-clear">Отключить</button></div>
-          <p class="spotify-embed-note">Это официальный встроенный плеер Spotify. Полные треки, вход в аккаунт и фоновое воспроизведение зависят от Spotify и типа аккаунта; управление этим звуком через системный плеер «Дорожки» пока не поддерживается.</p>
-        </section>
-        <div class="how">
-          <h3>Импорт плейлистов</h3>
-          <p>Для сопоставления плейлистов с собственными файлами можно использовать экспорт CSV/JSON.</p>
-          <ol class="steps">
-            <li>Экспортируйте плейлист в CSV или подготовьте Playlist1.json из запроса данных Spotify.</li>
-            <li>Загрузите файл кнопкой ниже.</li>
-            <li>Добавьте собственные аудиофайлы для воспроизведения.</li>
-          </ol>
-          <button class="btn primary" id="btn-list"><i data-i="plus"></i><span>Загрузить плейлист</span></button>
-        </div>
-        <div id="sp-lists" style="display:grid;gap:12px"></div>
-      </div>
+      <div id="pane-sp" role="tabpanel" hidden style="display:grid;gap:16px">
+  <section class="settings-hero"><span class="eyebrow">DOROZHKA AUDIO LAB</span><h2>Звук под себя.</h2><p>Настрой эквалайзер и поведение плеера. Настройки сохраняются на устройстве.</p></section>
+  <section class="settings-card">
+    <div class="settings-card-head"><div><span class="eyebrow">ЗВУК</span><h3>Эквалайзер</h3><p>Пять полос · низкие, средние и высокие частоты.</p></div><label class="switch-row"><span>Вкл.</span><input id="eq-enabled" type="checkbox" checked></label></div>
+    <div class="eq-presets"><button type="button" data-eq-preset="flat" class="active">Ровный</button><button type="button" data-eq-preset="bass">Бас</button><button type="button" data-eq-preset="vocal">Вокал</button><button type="button" data-eq-preset="treble">Высокие</button><button type="button" data-eq-preset="night">Тихий</button></div>
+    <div class="eq-bands">
+      <label><span>60 Hz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="0"><output>0 dB</output></label>
+      <label><span>230 Hz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="1"><output>0 dB</output></label>
+      <label><span>910 Hz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="2"><output>0 dB</output></label>
+      <label><span>3.6 kHz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="3"><output>0 dB</output></label>
+      <label><span>14 kHz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="4"><output>0 dB</output></label>
+    </div>
+    <p class="settings-note" id="eq-status">Эквалайзер будет применён к текущему и следующим трекам.</p>
+  </section>
+  <section class="settings-card">
+    <span class="eyebrow">ФОНОВОЕ ВОСПРОИЗВЕДЕНИЕ</span><h3>Медиакарточка Android</h3>
+    <p>В шторке уведомлений и на экране блокировки отображаются обложка, название, исполнитель, прогресс и кнопки управления.</p>
+    <div class="notification-settings"><div><b>Разрешение уведомлений</b><span id="notification-status">Проверка разрешения…</span></div><button class="btn small" id="notification-settings-button" type="button">Открыть настройки</button></div>
+    <p class="settings-note">Если карточка не видна, проверь разрешение уведомлений и ограничения фоновой работы Android для «Дорожки».</p>
+  </section>
+  <section class="settings-card"><span class="eyebrow">ПОВЕДЕНИЕ</span><h3>Плеер</h3>
+    <label class="setting-toggle"><span><b>Запоминать громкость</b><small>Сохранять уровень на устройстве</small></span><input type="checkbox" id="remember-volume" checked></label>
+    <label class="setting-toggle"><span><b>Плавная смена треков</b><small>Постепенное изменение громкости при переключении</small></span><input type="checkbox" id="soft-transition" checked></label>
+  </section>
+  <section class="settings-card"><span class="eyebrow">О ПРИЛОЖЕНИИ</span><h3>Дорожка</h3><p>Локальная медиатека, открытые музыкальные каталоги и нативный Android-плеер.</p><div class="settings-version">ANDROID · AUDIO ENGINE</div></section>
+  <div id="sp-lists" hidden></div>
+</div>
 
-      <div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
+<div id="pane-web" role="tabpanel" hidden style="display:none;gap:12px">
         <section class="global-search">
           <div class="global-heading"><span>ЕДИНЫЙ ПОИСК</span><h3>Найти музыку</h3><p>Ищет в музыкальных каталогах, которые разрешают прямой поиск и потоковое воспроизведение. Доступность конкретного исполнителя зависит от каталога.</p></div>
           <form class="global-form" id="global-form">
@@ -722,10 +753,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
           </div>
           <details class="global-settings">
             <summary>Настройки источников и уведомлений</summary>
-            <div class="notification-settings">
-              <div><b>Уведомление плеера</b><span id="notification-status">Проверка разрешения…</span></div>
-              <button class="btn small" id="notification-settings-button" type="button">Настройки уведомлений</button>
-            </div>
+
             <div id="global-key-settings"></div>
           </details>
           <div class="global-results">
@@ -752,7 +780,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
           <button class="source-chip" type="button" data-source="yandex" aria-pressed="false">Яндекс Музыка</button>
           <button class="source-chip" type="button" data-source="soundcloud" aria-pressed="false">SoundCloud</button>
           <button class="source-chip" type="button" data-source="free" aria-pressed="false">Jamendo / Archive</button>
-          <button class="source-chip" type="button" data-source="spotify" aria-pressed="false">Spotify</button>
+          
           <button class="source-chip" type="button" data-source="apple" aria-pressed="false">Apple Music</button>
           <button class="source-chip" type="button" data-source="deezer" aria-pressed="false">Deezer</button>
           <button class="source-chip" type="button" data-source="bandcamp" aria-pressed="false">Bandcamp</button>
@@ -779,11 +807,6 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
           <div class="source-intro"><h3>SoundCloud</h3><p>Поиск по каталогу SoundCloud в официальном веб-сервисе.</p></div>
           <form class="source-form" id="sc-form"><input class="search" id="sc-q" type="search" placeholder="Название или исполнитель" aria-label="Поиск в SoundCloud"><button class="btn primary" type="submit">Искать</button></form>
           <div class="external-search"><div><h3>SoundCloud</h3><p>Официальные страницы поиска и прослушивания.</p></div><a class="btn" id="sc-open" href="https://soundcloud.com" target="_blank" rel="noopener">Открыть</a></div>
-        </section>
-        <section class="source-panel" id="source-spotify" hidden>
-          <div class="source-intro"><h3>Spotify</h3><p>Поиск по каталогу Spotify. Импорт плейлистов в приложение по-прежнему доступен во вкладке Spotify.</p></div>
-          <form class="source-form" id="spotify-form"><input class="search" id="spotify-q" type="search" placeholder="Трек, альбом или исполнитель" aria-label="Поиск Spotify"><button class="btn primary" type="submit">Искать</button></form>
-          <div class="external-search"><div><h3>Spotify</h3><p>Официальные результаты поиска и прослушивание в Spotify.</p></div><a class="btn" id="spotify-open" href="https://open.spotify.com" target="_blank" rel="noopener">Открыть</a></div>
         </section>
         <section class="source-panel" id="source-apple" hidden>
           <div class="source-intro"><h3>Apple Music</h3><p>Поиск музыки через официальный каталог Apple Music.</p></div>
@@ -843,7 +866,7 @@ body.player-expanded .player-close{display:grid;position:absolute;right:14px;top
 <nav class="bottom-nav" aria-label="Основная навигация">
   <button type="button" class="bottom-nav-item active" data-nav="lib" aria-current="page"><span class="nav-symbol">⌂</span><small>Главная</small></button>
   <button type="button" class="bottom-nav-item" data-nav="web"><span class="nav-symbol">⌕</span><small>Поиск</small></button>
-  <button type="button" class="bottom-nav-item" data-nav="sp"><span class="nav-symbol">▤</span><small>Плейлисты</small></button>
+  <button type="button" class="bottom-nav-item" data-nav="sp"><span class="nav-symbol">⚙</span><small>Настройки</small></button>
 </nav>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <audio id="audio" preload="metadata"></audio>
@@ -1768,33 +1791,23 @@ $('#global-audius-slot').addEventListener('click',async function(e){
   sessionStorage.removeItem(k);
   localStorage.removeItem(k);
 });
-/* Встроенный официальный Spotify Embed для ссылок на плейлисты. */
-function spotifyPlaylistId(raw){
-  var s=String(raw||'').trim(),m=s.match(/(?:open\.spotify\.com\/(?:intl-[a-z]{2}\/)?playlist\/|spotify:playlist:)([A-Za-z0-9]+)/i);
-  return m?m[1]:'';
+// Native Android equalizer
+var EQ_PRESETS={flat:[0,0,0,0,0],bass:[7,5,1,0,2],vocal:[-2,1,5,5,2],treble:[-2,-1,0,5,7],night:[3,1,-1,-2,-3]};
+var eqLevels=ls.get('eqLevels',[0,0,0,0,0]),eqEnabled=ls.get('eqEnabled',true);
+function applyEq(){
+  var bands=eqLevels.map(function(v){return Math.max(-12,Math.min(12,Number(v)||0));});
+  if($('#eq-enabled'))$('#eq-enabled').checked=eqEnabled;
+  document.querySelectorAll('[data-eq-band]').forEach(function(input){var i=+input.dataset.eqBand;input.value=bands[i];input.nextElementSibling.textContent=(bands[i]>0?'+':'')+bands[i]+' dB';});
+  if(Native&&Native.setEqualizer)nCall(Native.setEqualizer({enabled:eqEnabled,bands:bands.map(function(v){return Math.round(v*100);})}));
+  ls.set('eqLevels',bands);ls.set('eqEnabled',eqEnabled);
+  document.querySelectorAll('[data-eq-preset]').forEach(function(b){b.classList.toggle('active',JSON.stringify(EQ_PRESETS[b.dataset.eqPreset])===JSON.stringify(bands));});
+  if($('#eq-status'))$('#eq-status').textContent=Native?'Android DSP: '+(eqEnabled?'эквалайзер включён':'эквалайзер выключен')+'.':'Эквалайзер работает в Android-приложении.';
 }
-$('#spotify-embed-form').addEventListener('submit',function(e){
-  e.preventDefault();var raw=$('#spotify-playlist-url').value.trim(),id=spotifyPlaylistId(raw);
-  if(!id){toast('Вставь ссылку именно на плейлист Spotify');return;}
-  var canonical='https://open.spotify.com/playlist/'+id;
-  $('#spotify-embed-frame').innerHTML='<iframe title="Плейлист Spotify" src="https://open.spotify.com/embed/playlist/'+encodeURIComponent(id)+'?utm_source=generator&theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>';
-  $('#spotify-embed-open').href=canonical;$('#spotify-embed-actions').hidden=false;
-  ls.set('spotifyPlaylistUrl',canonical);
-});
-$('#spotify-embed-clear').addEventListener('click',function(){
-  $('#spotify-embed-frame').innerHTML='<div class="empty-box" style="margin:10px;border:0"><h3>Плейлист отключён</h3><p>Вставь ссылку на другой плейлист Spotify.</p></div>';
-  $('#spotify-embed-actions').hidden=true;$('#spotify-playlist-url').value='';ls.set('spotifyPlaylistUrl','');
-});
-var savedSpotifyPlaylist=ls.get('spotifyPlaylistUrl','');
-if(savedSpotifyPlaylist){$('#spotify-playlist-url').value=savedSpotifyPlaylist;var sid=spotifyPlaylistId(savedSpotifyPlaylist);if(sid){$('#spotify-embed-frame').innerHTML='<iframe title="Плейлист Spotify" src="https://open.spotify.com/embed/playlist/'+encodeURIComponent(sid)+'?utm_source=generator&theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>';$('#spotify-embed-open').href='https://open.spotify.com/playlist/'+sid;$('#spotify-embed-actions').hidden=false;}}
-$('#spotify-track-form').addEventListener('submit',function(e){
-  e.preventDefault();
-  var q=$('#spotify-track-q').value.trim();
-  if(!q)return;
-  var url='https://open.spotify.com/search/'+encodeURIComponent(q);
-  var w=window.open(url,'_blank','noopener');
-  if(!w)toast('Разрешите открытие новой вкладки для перехода в Spotify.');
-});
+document.querySelectorAll('[data-eq-band]').forEach(function(input){input.addEventListener('input',function(){eqLevels[+input.dataset.eqBand]=+input.value;applyEq();});});
+document.querySelectorAll('[data-eq-preset]').forEach(function(b){b.addEventListener('click',function(){eqLevels=EQ_PRESETS[b.dataset.eqPreset].slice();applyEq();});});
+if($('#eq-enabled'))$('#eq-enabled').addEventListener('change',function(){eqEnabled=this.checked;applyEq();});
+applyEq();
+
 /* ---------- дополнительные источники ---------- */
 var ytKey=ls.get('youtubeApiKey','');
 var ytLastQuery='';
