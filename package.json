@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "prepare-assets": "node scripts/prepare.js",
-    "android": "npm run prepare-assets && npx cap sync android && python3 native-setup.py"
+    "android": "npm run prepare-assets && npx cap sync android && python3 native-setup.py",
+    "check": "npm run prepare-assets && node scripts/check-inline-js.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
