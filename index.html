@@ -475,7 +475,7 @@ body{padding:18px clamp(14px,3vw,38px) 34px;background:radial-gradient(ellipse a
 .provider-chip.active{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .global-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .global-result-group{min-width:0;padding:16px;border-radius:18px;background:linear-gradient(150deg,rgba(255,255,255,.035),transparent 65%),#10141d;border-color:#283346}
-.global-result-group[data-provider-group="audius"]{grid-column:1/-1}
+
 .global-result-title{display:flex;gap:12px;align-items:baseline;margin-bottom:12px}
 .global-result-title h4{font-size:15px;letter-spacing:-.02em}
 .global-result-title span{font-size:11px;color:#8793a8}
@@ -486,7 +486,7 @@ body{padding:18px clamp(14px,3vw,38px) 34px;background:radial-gradient(ellipse a
 .global-result-group .rt small{font-size:11px}
 .global-settings{background:#0e131c;border-color:#2a3548;border-radius:16px}
 @media(max-width:899px){.app{grid-template-columns:minmax(0,1fr)}.player{position:relative}.cover{max-width:min(78vw,360px)}}
-@media(max-width:620px){body{padding:12px 12px 24px}.top{margin-bottom:14px}.brand{font-size:20px}.global-results{grid-template-columns:1fr}.global-result-group[data-provider-group="audius"]{grid-column:auto}.global-form{grid-template-columns:minmax(0,1fr) auto}.global-form .btn{min-width:86px;padding-inline:12px}.global-heading h3{font-size:30px}.player{border-radius:22px;padding:18px}.cover{max-width:min(76vw,320px)}}
+@media(max-width:620px){body{padding:12px 12px 24px}.top{margin-bottom:14px}.brand{font-size:20px}.global-results{grid-template-columns:1fr}.global-form{grid-template-columns:minmax(0,1fr) auto}.global-form .btn{min-width:86px;padding-inline:12px}.global-heading h3{font-size:30px}.player{border-radius:22px;padding:18px}.cover{max-width:min(76vw,320px)}}
 
 /* DOROZHKA — Android-first home */
 :root{--bg:#090b10;--surface:#131823;--surface-2:#1d2533;--line:#2a3446;--fg:#f4f5f8;--muted:#9aa5b8;--accent:#c5f477;--accent-fg:#17200c;color-scheme:dark}
@@ -1476,7 +1476,7 @@ async function nativePick(){
 }
 
 /* ---------- поиск:  и Internet Archive ---------- */
-var IA='https://archive.org',AUD='https://api.audius.co/v1',webItems={},audiusTracks={};
+var IA='https://archive.org',webItems={};
 function webStatus(t){$('#web-status').textContent=t;}
 function durOf(v){
   if(v==null||v==='')return 0;
@@ -1509,51 +1509,6 @@ function searchTerms(q){
     if(n===norm(key)||aliases.some(function(a){return n===norm(a);}))return aliases.slice();
   }
   return [q];
-}
-async function audiusSearch(q){
-  async function get(path){
-    var r=await fetch(AUD+path,{headers:{'Accept':'application/json'}});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    var j=await r.json();return j.data||[];
-  }
-  var terms=searchTerms(q).slice(0,4);
-  var trackSets=await Promise.all(terms.map(function(term){
-    return get('/tracks/search?query='+encodeURIComponent(term)+'&limit=20').catch(function(){return [];});
-  }));
-  var userSets=await Promise.all(terms.slice(0,3).map(function(term){
-    return get('/users/search?query='+encodeURIComponent(term)+'&limit=5&sort_method=relevant').catch(function(){return [];});
-  }));
-  var users=[],userSeen={};
-  userSets.forEach(function(set){set.forEach(function(u){
-    if(u&&u.id&&!userSeen[u.id]){userSeen[u.id]=1;users.push(u);}
-  });});
-  var artistSets=await Promise.all(users.slice(0,6).map(function(u){
-    return get('/users/'+encodeURIComponent(u.id)+'/tracks?limit=30&sort_method=plays&sort_direction=desc').catch(function(){return [];});
-  }));
-  var seen={},all=[];
-  trackSets.concat(artistSets).forEach(function(set){set.forEach(function(t){
-    if(t&&t.id&&t.title&&!seen[t.id]){seen[t.id]=1;all.push(t);}
-  });});
-  var aliases=terms.map(norm);
-  function score(t){
-    var u=t.user||{},artist=norm((u.name||'')+' '+(u.handle||'')+' '+(t.artist||''));
-    var title=norm(t.title||''),n=norm(q),v=0;
-    if(aliases.some(function(a){return a&&artist.indexOf(a)>=0;}))v+=100;
-    if(aliases.some(function(a){return a&&title.indexOf(a)>=0;}))v+=30;
-    if(n&&title.indexOf(n)>=0)v+=20;
-    return v+(Number(t.play_count)||0)/1000000;
-  }
-  all.sort(function(a,b){return score(b)-score(a);});
-  return all.slice(0,80);
-}
-function audiusRec(t){
-  var cover=t.artwork&&(t.artwork['480x480']||t.artwork['150x150']||t.artwork['1000x1000'])||'';
-  return {id:'au'+t.id,name:'audius:'+t.id,size:0,title:t.title||'Без названия',artist:t.user&&t.user.name||t.artist||'',album:'',blob:null,cover:null,
-    remoteUrl:AUD+'/tracks/'+encodeURIComponent(t.id)+'/stream?app_name=Doroshka',coverRemote:cover,dur:t.duration||0};
-}
-function renderAudius(list){
-  list.forEach(function(t){audiusTracks[t.id]=t;});
-  $('#global-audius-slot').innerHTML=list.map(function(t){var r=audiusRec(t);return '<div class="row" data-au="'+esc(t.id)+'"><button class="row-main" data-act="auplay" aria-label="Играть: '+esc(r.title)+'">'+thumb({title:r.title,artist:r.artist,coverUrl:r.coverRemote},false)+'<span class="rt"><b>'+esc(r.title)+'</b><small>'+esc(r.artist)+'</small></span><span class="dur">'+(r.dur?fmt(r.dur):'')+'</span></button><button class="x" data-act="auadd" aria-label="Добавить в медиатеку">'+svg('plus',18)+'</button></div>';}).join('');
 }
 
 async function iaSearch(q){
@@ -1634,7 +1589,6 @@ $('#web-res').addEventListener('click',async function(e){
 /* Переносим блок Internet Archive в единый экран. */
 $('#global-archive-slot').appendChild($('#web-status'));
 $('#global-archive-slot').appendChild($('#web-res'));
-$('#global-audius-slot').innerHTML='<div class="status" id="audius-status">Введите запрос для поиска в Audius.</div><div id="audius-results"></div>';
 $('#yt-open-search').hidden=true;
 var activeProvider='all';
 if(Native){
@@ -1711,14 +1665,7 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
   var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
   playIds(sorted().map(function(x){return x.id;}),id);
 });
-$('#global-audius-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act]');if(!b)return;
-  var row=b.closest('[data-au]');if(!row)return;
-  var t=audiusTracks[row.dataset.au];if(!t)return;
-  var id=await addRemoteRec(audiusRec(t));
-  if(b.dataset.act==='auplay')playIds(sorted().map(function(x){return x.id;}),id);
-  else if(b.dataset.act==='auadd'){b.disabled=true;b.textContent='✓';toast('Добавлено в медиатеку');}
-});
+
 
 /* ---------- Поиск в официальном каталоге Spotify ---------- */
 ['doroshka_spotify_token','doroshka_spotify_expiry','doroshka_spotify_verifier','doroshka_spotify_state'].forEach(function(k){
