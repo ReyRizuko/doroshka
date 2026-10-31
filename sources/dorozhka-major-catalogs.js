@@ -160,10 +160,50 @@
     var item=spotifyRecords[String(id)];
     if(!item)return Promise.reject(new Error('Трек Spotify больше не найден. Повтори поиск.'));
     initSpotifyPlayer();
-    if(!spotifyPlayer||!spotifyDevice){root.open(item.url,'_blank','noopener');return Promise.resolve({external:true});}
+    if(!spotifyPlayer||!spotifyDevice)return Promise.reject(new Error('Встроенный Spotify-плеер недоступен на этом устройстве. Открытие внешнего приложения отключено.'));
     return spotifyPlayer.activateElement().then(function(){
       return spotifyRequest('https://api.spotify.com/v1/me/player/play?device_id='+encodeURIComponent(spotifyDevice),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[item.uri]})});
     });
+  }
+  function play(provider,id){
+    if(provider==='Apple Music')return playApple(id);
+    if(provider==='Spotify')return playSpotify(id);
+    return Promise.reject(new Error('Неизвестный движок воспроизведения: '+provider));
+  }
+  function pause(provider){
+    if(provider==='Apple Music')return Promise.resolve(appleInstance().pause());
+    if(provider==='Spotify'&&spotifyPlayer)return spotifyPlayer.pause();
+    return Promise.reject(new Error('Движок '+provider+' не подключён.'));
+  }
+  function resume(provider){
+    if(provider==='Apple Music')return Promise.resolve(appleInstance().play());
+    if(provider==='Spotify'&&spotifyPlayer)return spotifyPlayer.resume();
+    return Promise.reject(new Error('Движок '+provider+' не подключён.'));
+  }
+  function seek(provider,seconds){
+    var value=Math.max(0,Number(seconds)||0);
+    if(provider==='Apple Music')return Promise.resolve(appleInstance().seekToTime(value));
+    if(provider==='Spotify'&&spotifyPlayer)return spotifyPlayer.seek(value*1000);
+    return Promise.reject(new Error('Перемотка для '+provider+' недоступна.'));
+  }
+  function setVolume(provider,value){
+    var volume=Math.max(0,Math.min(1,Number(value)||0));
+    if(provider==='Apple Music'){appleInstance().volume=volume;return Promise.resolve();}
+    if(provider==='Spotify'&&spotifyPlayer)return spotifyPlayer.setVolume(volume);
+    return Promise.reject(new Error('Громкость для '+provider+' недоступна.'));
+  }
+  function getState(provider){
+    if(provider==='Apple Music'){
+      var music=appleInstance();
+      return Promise.resolve({currentTime:Number(music.currentPlaybackTime)||0,duration:Number(music.currentPlaybackDuration)||0,paused:!music.isPlaying,playing:!!music.isPlaying});
+    }
+    if(provider==='Spotify'&&spotifyPlayer){
+      return spotifyPlayer.getCurrentState().then(function(state){
+        if(!state)return {currentTime:0,duration:0,paused:true,playing:false};
+        return {currentTime:(state.position||0)/1000,duration:(state.duration||0)/1000,paused:!!state.paused,playing:!state.paused};
+      });
+    }
+    return Promise.reject(new Error('Состояние '+provider+' недоступно.'));
   }
   function getApple(id){return appleRecords[String(id)]||null;}
   function getSpotify(id){return spotifyRecords[String(id)]||null;}
@@ -171,6 +211,6 @@
   try{exchangeCode().catch(function(e){root.console&&console.warn('Spotify authorization:',e.message);});}catch(e){}
   if(token())initSpotifyPlayer();
   root.DorozhkaMajorCatalogs={setAppleToken:setAppleToken,appleBase:appleBase,searchApple:searchApple,playApple:playApple,getApple:getApple,
-    setSpotify:setSpotify,spotifyBase:spotifyBase,authorizeSpotify:authorizeSpotify,searchSpotify:searchSpotify,playSpotify:playSpotify,getSpotify:getSpotify,
+    setSpotify:setSpotify,spotifyBase:spotifyBase,authorizeSpotify:authorizeSpotify,searchSpotify:searchSpotify,playSpotify:playSpotify,getSpotify:getSpotify,play:play,pause:pause,resume:resume,seek:seek,setVolume:setVolume,getState:getState,
     isSpotifyConnected:function(){return !!token();}};
 }(window));
