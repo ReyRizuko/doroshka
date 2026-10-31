@@ -38,4 +38,10 @@ if (!fs.existsSync(sourceFile)) {
 }
 new vm.Script(fs.readFileSync(sourceFile, 'utf8'), { filename: 'www/sources/dorozhka-source.js' });
 
+const catalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-catalog.js');
+if (!fs.existsSync(catalogFile)) {
+  throw new Error('Doroshka Music catalog adapter is missing from www/sources');
+}
+new vm.Script(fs.readFileSync(catalogFile, 'utf8'), { filename: 'www/sources/dorozhka-catalog.js' });
+
 console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels verified.');
