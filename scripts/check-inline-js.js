@@ -83,7 +83,9 @@ const nativeGuards = [
   ['service startup command queue', 'static void prepareStart()'],
   ['deferred native controls', 'pendingCommands.add(r)'],
   ['native service startup drain', 'for (Runnable command : pendingCommands) handler.post(command);'],
-  ['startup failure cleanup', 'static void cancelStart()']
+  ['startup failure cleanup', 'static void cancelStart()'],
+  ['plugin teardown cleanup', 'protected void handleOnDestroy()'],
+  ['plugin instance release', 'if (instance == this) instance = null;']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
