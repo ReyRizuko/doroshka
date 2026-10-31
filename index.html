@@ -655,6 +655,11 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 #lib-list .row-main{min-width:0}
 @media(max-width:380px){.discover-tile{min-height:128px;padding:12px}.discover-tile b{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.discover-tile{transition:none}}
+
+/* Queue actions in catalog results */
+.global-result-group .row{grid-template-columns:minmax(0,1fr) auto}
+.global-result-group .row .x{margin:0 4px;width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.045);font-size:21px}
+.global-result-group .row .x:hover{background:rgba(197,244,119,.12);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -995,7 +1000,7 @@ function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;
 var lib=[], lists=[], libVer=0, mcache=new Map(), openLists=new Set();
 var order=[], pos=-1, baseList=[], shuffleOn=false, repeat=0, curId=null, errRun=0;
 var durs=ls.get('dur',{}), tab='lib', filter='', seeking=false, probing=false;
-var favorites=new Set(ls.get('favorites',[])), history=ls.get('history',[]), libraryView='all';
+var favorites=new Set(Array.isArray(ls.get('favorites',[]))?ls.get('favorites',[]):[]), history=Array.isArray(ls.get('history',[]))?ls.get('history',[]):[], libraryView='all';
 var Native=null;
 try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){Native=window.Capacitor.registerPlugin('Playback');}}catch(e){}
 var audio=$('#audio');
@@ -1110,6 +1115,7 @@ async function removeItem(id){
   delete durs[id];ls.set('dur',durs);
   await idb('files','readwrite',function(s){return s.delete(id);});
   order=order.filter(function(x){return x!==id;});baseList=baseList.filter(function(x){return x!==id;});
+  favorites.delete(id);history=history.filter(function(x){return x!==id;});ls.set('favorites',Array.from(favorites));ls.set('history',history);
   if(curId===id){audio.pause();audio.removeAttribute('src');audio.load();if(Native){nCall(Native.stop());nativeLive=false;}curId=null;pos=-1;updateNow();}
   else if(curId)pos=order.indexOf(curId);
   libVer++;mcache.clear();renderAll();
@@ -1832,7 +1838,7 @@ function renderMusic(list){
   var slot=$('#global-music-slot');
   if(!list.length){slot.innerHTML='<div class="status">В собственном каталоге совпадений нет.</div>';return;}
   slot.innerHTML=list.map(function(t){
-    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Jamendo'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
+    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Jamendo'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-music" aria-label="Добавить в очередь">＋</button></div>';
   }).join('');
 }
 function renderDorozhka(list){
@@ -1841,7 +1847,7 @@ function renderDorozhka(list){
   slot.innerHTML=list.map(function(t){
     var details=[t.creator||'Исполнитель не указан','Audius'].join(' · ');
     var landing=t.permalink&&/^https:\/\//i.test(t.permalink)?'<a class="x" href="'+esc(t.permalink)+'" target="_blank" rel="noopener" aria-label="Открыть трек в Audius">↗</a>':'';
-    return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button>'+landing+'</div>';
+    return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-ds" aria-label="Добавить в очередь">＋</button>'+landing+'</div>';
   }).join('');
 }
 function renderMajorCatalog(slotId,list,provider){
@@ -1850,7 +1856,7 @@ function renderMajorCatalog(slotId,list,provider){
   slot.innerHTML=list.map(function(t){
     var attr=provider==='Apple Music'?'data-apple-track':'data-spotify-track';
     var details=[t.creator||'Исполнитель не указан',t.album||provider].join(' · ');
-    return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="major-queue" data-provider="'+esc(provider)+'" aria-label="Добавить в очередь и воспроизвести: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button></div>';
+    return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="major-play" data-provider="'+esc(provider)+'" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="major-queue" data-provider="'+esc(provider)+'" aria-label="Добавить в очередь">＋</button></div>';
   }).join('');
 }
 var globalSearchSeq=0;
@@ -1915,33 +1921,47 @@ document.querySelectorAll('[data-artist]').forEach(function(b){
   b.addEventListener('click',function(){setTab('web');syncBottomNav('web');runGlobalSearch(b.dataset.artist);});
 });
 $('#global-music-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act=music-play]');if(!b)return;
+  var b=e.target.closest('[data-act]');if(!b)return;
   var row=b.closest('[data-music]');if(!row)return;
   var t=window.DorozhkaCatalog.get(row.dataset.music);if(!t)return;
   var id=await addRemoteRec({id:'dm'+t.id,name:'dorozhka-music:'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
-  var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);
+  if(b.dataset.act==='queue-music')queueTrack(id);
+  else{var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);}
 });
 $('#global-dorozhka-slot').addEventListener('click',async function(e){
-  var b=e.target.closest('[data-act=dsplay]');if(!b)return;
+  var b=e.target.closest('[data-act]');if(!b)return;
   var row=b.closest('[data-ds]');if(!row)return;
   var t=window.DorozhkaSource.get(row.dataset.ds);if(!t)return;
   var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
-  var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);
+  if(b.dataset.act==='queue-ds')queueTrack(id);
+  else{var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);}
 });
-async function queueMajorTrack(provider,trackId){
+function queueTrack(id){
+  var it=byId(id);if(!it)return;
+  if(Native&&it.provider){toast('Этот источник пока не поддерживает воспроизведение в Android-плеере.');return;}
+  if(baseList.indexOf(id)>=0){toast('Трек уже есть в очереди');return;}
+  if(!curId){playIds([id],id);return;}
+  if(baseList.indexOf(curId)<0)baseList.unshift(curId);
+  baseList.push(id);
+  if(shuffleOn){if(order.indexOf(curId)<0)buildOrder(curId);order.push(id);pos=order.indexOf(curId);}
+  else{order=baseList.slice();pos=order.indexOf(curId);}
+  if(Native&&nativeLive)nativeQueue(true);
+  renderHomeShelves();toast('Добавлено в очередь');
+}
+async function queueMajorTrack(provider,trackId,addOnly){
   var t=provider==='Apple Music'?window.DorozhkaMajorCatalogs.getApple(trackId):window.DorozhkaMajorCatalogs.getSpotify(trackId);
   if(!t)return toast('Результат поиска устарел. Повтори поиск.');
   var id=(provider==='Apple Music'?'am:':'sp:')+String(t.id);
   await addRemoteRec({id:id,name:provider+':'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:'',coverRemote:t.thumbnail||'',dur:t.duration||0,provider:provider,providerTrackId:String(t.id)});
-  var ids=baseList.length?baseList.slice():[];
-  if(ids.indexOf(id)<0)ids.push(id);
-  playIds(ids,id);
+  if(addOnly)queueTrack(id);
+  else{var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);}
 }
 ['#global-apple-slot','#global-spotify-slot'].forEach(function(selector){
   $(selector).addEventListener('click',function(e){
-    var b=e.target.closest('[data-act=major-queue]');if(!b)return;
+    var b=e.target.closest('[data-act]');if(!b)return;
     var row=b.closest('[data-apple-track],[data-spotify-track]');if(!row)return;
-    queueMajorTrack(b.dataset.provider,row.dataset.appleTrack||row.dataset.spotifyTrack).catch(function(err){toast(err.message||'Не удалось добавить трек в очередь');});
+    var id=row.dataset.appleTrack||row.dataset.spotifyTrack;
+    queueMajorTrack(b.dataset.provider,id,b.dataset.act==='major-queue').catch(function(err){toast(err.message||'Не удалось добавить трек');});
   });
 });
 
