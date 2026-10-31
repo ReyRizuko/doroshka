@@ -54,6 +54,9 @@ if (!fs.existsSync(majorCatalogFile)) {
 const majorCatalogSource = fs.readFileSync(majorCatalogFile, 'utf8');
 new vm.Script(majorCatalogSource, { filename: 'www/sources/dorozhka-major-catalogs.js' });
 
+for (const token of ['function sendNativeQueue(payload,seq)', 'Native.setQueue(payload).catch', 'nativeLive=false;']) {
+  if (!html.includes(token)) throw new Error('Native queue error handling is missing: ' + token);
+}
 for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'externalEnded=false', 'dorozhka-provider-ended', 'DorozhkaMajorCatalogs.seek']) {
   if (!html.includes(token)) {
     throw new Error('Unified player integration is missing: ' + token);
