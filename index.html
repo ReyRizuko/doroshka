@@ -995,7 +995,7 @@ function readTags(f){
   });
 }
 function mk(r){
-  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!r.remoteUrl,uri:r.uri||''};
+  var it={id:r.id,name:r.name,size:r.size,title:r.title,artist:r.artist,album:r.album,blob:r.blob||null,cover:r.cover||null,remote:!!(r.remoteUrl||r.provider),uri:r.uri||''};
   it.provider=r.provider||'';
   it.providerTrackId=r.providerTrackId||'';
   it.url=r.remoteUrl||r.uri||(r.blob?URL.createObjectURL(r.blob):'');
@@ -1372,10 +1372,10 @@ function updateNow(){
     $('#mini').hidden=true;document.body.classList.remove('has-mini');setPlaying(false);updateTime();return;
   }
   cv.className='cover';cv.setAttribute('style',coverCss(it));cv.textContent=it.coverUrl?'':initial(it);
-  $('#np-title').textContent=it.title;$('#np-artist').textContent=(it.artist||'Неизвестный исполнитель')+(it.album?' · '+it.album:'');
+  $('#np-title').textContent=it.title;$('#np-artist').textContent=(it.artist||'Неизвестный исполнитель')+(it.album?' · '+it.album:'')+(it.provider?' · '+it.provider:'');
   $('#mini').hidden=false;document.body.classList.add('has-mini');
   var mt=$('#mini-thumb');mt.setAttribute('style',coverCss(it));mt.textContent=it.coverUrl?'':initial(it);
-  $('#mini-title').textContent=it.title;$('#mini-artist').textContent=it.artist||'Неизвестный исполнитель';
+  $('#mini-title').textContent=it.title;$('#mini-artist').textContent=(it.artist||'Неизвестный исполнитель')+(it.provider?' · '+it.provider:'');
   document.title='Дорожка · '+it.title;
 }
 function updateTime(){
