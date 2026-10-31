@@ -31,4 +31,9 @@ for (const [pkg, family, weights] of FONTS) {
   }
 }
 fs.writeFileSync(path.join(www, 'fonts.css'), css);
+const sources = path.join(root, 'sources');
+if (fs.existsSync(sources)) {
+  fs.cpSync(sources, path.join(www, 'sources'), { recursive: true });
+  console.log('Скопированы собственные источники музыки');
+}
 console.log('Готово: ресурсы скопированы в www');
