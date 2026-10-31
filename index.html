@@ -668,6 +668,9 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 .playlist-shelf .pl{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.07);padding:13px}
 .playlist-list{display:grid;gap:10px}
 .playlist-list .hint{margin:0}
+
+.smart-recs{display:flex;flex-wrap:wrap;gap:7px}
+.smart-rec-chip{padding:9px 12px;border:1px solid rgba(197,244,119,.22);border-radius:999px;background:rgba(197,244,119,.07);color:#d6f4a5;font-size:11px;font-weight:650}
 </style>
 </head>
 <body>
@@ -745,6 +748,10 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
             <button type="button" data-discover="ambient instrumental" class="discover-tile discover-blue"><span>03 / AMBIENT</span><b>Спокойный фон</b><small>Инструментальная музыка</small></button>
             <button type="button" data-discover="rock alternative" class="discover-tile discover-orange"><span>04 / GUITARS</span><b>Гитары</b><small>Рок и альтернативная сцена</small></button>
           </div>
+        </section>
+        <section class="home-shelf">
+          <div class="section-head"><div><span class="eyebrow">НА ОСНОВЕ ТВОЕГО ВКУСА</span><h3>Исследуй знакомое</h3></div><span class="section-mark">↗</span></div>
+          <div id="smart-recs" class="smart-recs"><p class="hint">После прослушивания здесь появятся быстрые переходы к похожим исполнителям.</p></div>
         </section>
         <section class="home-shelf">
           <div class="section-head"><div><span class="eyebrow">ВОЗВРАЩАЙСЯ К МУЗЫКЕ</span><h3>Недавно слушал</h3></div><button class="shelf-link" type="button" data-library-view="history">Вся история ↗</button></div>
@@ -1295,7 +1302,12 @@ function shelfRow(it,action){
   return '<button type="button" class="shelf-track" data-shelf-act="'+action+'" data-id="'+esc(it.id)+'">'+thumb(it,true)+'<span class="rt"><b>'+esc(it.title)+'</b><small>'+esc(it.artist||'Неизвестный исполнитель')+'</small></span><span class="shelf-play">▶</span></button>';
 }
 function renderHomeShelves(){
-  var recent=$('#recent-list'),queue=$('#home-queue');
+  var recent=$('#recent-list'),queue=$('#home-queue'),smart=$('#smart-recs');
+  if(smart){
+    var pool=history.map(byId).concat(Array.from(favorites).map(byId)).filter(Boolean),seen={},artists=[];
+    pool.forEach(function(it){var name=(it.artist||'').trim(),key=norm(name);if(name&&key&&!seen[key]){seen[key]=1;artists.push(name);}});
+    smart.innerHTML=artists.length?artists.slice(0,6).map(function(name){return '<button type="button" class="smart-rec-chip" data-smart-artist="'+esc(name)+'">Похожее на '+esc(name)+' ↗</button>';}).join(''):'<p class="hint">После прослушивания здесь появятся быстрые переходы к похожим исполнителям.</p>';
+  }
   if(recent){
     var recentItems=history.map(byId).filter(Boolean).slice(0,5);
     recent.innerHTML=recentItems.length?recentItems.map(function(it){return shelfRow(it,'play');}).join(''):'<p class="hint">История появится после первого прослушивания.</p>';
@@ -1791,7 +1803,7 @@ async function webFiles(card){
       box._files=files;
       box.innerHTML='<div class="acts" style="margin:6px 0"><button class="btn small primary" data-act="iaaddall">Добавить всё ('+files.length+')</button></div>'+files.map(function(f,i){
         var m=fileMeta(d,f);
-        return '<div class="frow"><span class="rt"><b>'+esc(m.title)+'</b><small>'+esc(m.artist)+'</small></span><span class="acts"><button class="btn small" data-act="iaplay" data-i="'+i+'">Играть</button><button class="btn small" data-act="iaadd" data-i="'+i+'" aria-label="Добавить в «Файлы»">+</button></span></div>';
+        return '<div class="frow"><span class="rt"><b>'+esc(m.title)+'</b><small>'+esc(m.artist)+'</small></span><span class="acts"><button class="btn small" data-act="iaplay" data-i="'+i+'">Играть</button><button class="btn small" data-act="iaqueue" data-i="'+i+'" aria-label="Добавить в очередь">В очередь</button><button class="btn small" data-act="iaadd" data-i="'+i+'" aria-label="Добавить в медиатеку">+</button></span></div>';
       }).join('');
     }
     box.hidden=false;box.dataset.loaded='1';btn.textContent='Скрыть треки';
@@ -1806,6 +1818,7 @@ $('#web-res').addEventListener('click',async function(e){
   if(act==='files')webFiles(card);
   else if(act==='iaplay'){var rec=iaRec(card.dataset.id,box._files[+btn.dataset.i],d);var id=await addRemoteRec(rec);playIds(sorted().map(function(x){return x.id;}),id);}
   else if(act==='iaadd'){await addRemoteRec(iaRec(card.dataset.id,box._files[+btn.dataset.i],d));btn.disabled=true;btn.textContent='✓';}
+  else if(act==='iaqueue'){var queueId=await addRemoteRec(iaRec(card.dataset.id,box._files[+btn.dataset.i],d));queueTrack(queueId);}
   else if(act==='iaaddall'){
     btn.disabled=true;var fl=box._files;
     for(var k=0;k<fl.length;k++)await addRemoteRec(iaRec(card.dataset.id,fl[k],d));
@@ -1921,6 +1934,10 @@ document.querySelectorAll('[data-discover]').forEach(function(b){
     var q=b.dataset.discover||'';
     setTab('web');syncBottomNav('web');$('#global-q').value=q;runGlobalSearch(q);
   });
+});
+$('#smart-recs').addEventListener('click',function(e){
+  var b=e.target.closest('[data-smart-artist]');if(!b)return;
+  var q=b.dataset.smartArtist;setTab('web');syncBottomNav('web');$('#global-q').value=q;runGlobalSearch(q);
 });
 $('#recent-list').addEventListener('click',function(e){
   var b=e.target.closest('[data-shelf-act=play]');if(!b)return;
