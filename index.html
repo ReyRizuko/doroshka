@@ -1313,7 +1313,9 @@ function load(id){
     if(Native){toast('Воспроизведение '+it.provider+' внутри Android-приложения пока не поддерживается.');setPlaying(false);return;}
     stopExternalPoll();externalSeq++;externalProvider=it.provider;externalPos=0;externalDur=it.dur||0;
     audio.pause();updateNow();markCurrent();setMedia(it);setPlaying(false);
-    window.DorozhkaMajorCatalogs.play(it.provider,it.providerTrackId).then(function(){
+    window.DorozhkaMajorCatalogs.setVolume(it.provider,+$('#vol').value).then(function(){
+      return window.DorozhkaMajorCatalogs.play(it.provider,it.providerTrackId);
+    }).then(function(){
       if(externalProvider===it.provider){setPlaying(true);startExternalPoll();}
     }).catch(function(err){
       if(externalProvider===it.provider){externalProvider='';stopExternalPoll();setPlaying(false);toast(err&&err.message||('Не удалось запустить '+it.provider));}
