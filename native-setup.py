@@ -130,6 +130,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import org.json.JSONArray;
 
 @CapacitorPlugin(name = "Playback")
@@ -982,11 +984,35 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     // ---------- медиасессия и уведомление ----------
     private Bitmap artwork(Item it) {
-        if (it == null || it.art == null || !it.art.startsWith("data:image/")) return null;
+        if (it == null || it.art == null || it.art.isEmpty()) return null;
         try {
-            int comma = it.art.indexOf(',');
-            if (comma < 0) return null;
-            byte[] bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
+            byte[] bytes;
+            if (it.art.startsWith("data:image/")) {
+                int comma = it.art.indexOf(',');
+                if (comma < 0) return null;
+                bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
+            } else if (it.art.startsWith("https://")) {
+                HttpURLConnection connection = (HttpURLConnection) new URL(it.art).openConnection();
+                connection.setConnectTimeout(4000);
+                connection.setReadTimeout(5000);
+                connection.setInstanceFollowRedirects(true);
+                connection.setRequestProperty("User-Agent", "Dorozhka Android");
+                try {
+                    int status = connection.getResponseCode();
+                    if (status < 200 || status >= 300) return null;
+                    java.io.InputStream input = connection.getInputStream();
+                    try {
+                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[8192];
+                        int count, total = 0;
+                        while ((count = input.read(buffer)) != -1 && total < 3145728) {
+                            output.write(buffer, 0, count);
+                            total += count;
+                        }
+                        bytes = output.toByteArray();
+                    } finally { input.close(); }
+                } finally { connection.disconnect(); }
+            } else return null;
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
