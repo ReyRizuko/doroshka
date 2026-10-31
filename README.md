@@ -48,17 +48,17 @@ npx cap open android
 - `GET /api/v1/tracks/:id/stream` — аудиопоток с поддержкой Range.
 - `POST /api/v1/admin/tracks` — загрузка записи администратором.
 
-### Развёртывание без VPS
+### Каталог без VPS и банковской карты
 
-Для основного варианта подготовлена конфигурация Cloudflare Workers + D1 + R2. Отдельный постоянно работающий сервер не нужен. Пошаговая настройка и автоматическое развёртывание через GitHub Actions описаны в [cloudflare/README.md](cloudflare/README.md).
+Основной вариант теперь использует **GitHub Releases** как хранилище аудиофайлов. Отдельный сервер, Cloudflare R2/D1, VPS, Docker и банковская карта не нужны. Приложение читает список публичных Releases через GitHub API и воспроизводит прикреплённые аудиофайлы.
 
-Понадобится аккаунт Cloudflare, D1 database, R2 bucket и три GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DOROZHKA_ADMIN_TOKEN`. Также нужно вписать выданный Cloudflare ID базы D1 в `wrangler.toml`. После этого запускается workflow **Deploy Doroshka Music API**.
+Настройка и формат релизов описаны в [releases/README.md](releases/README.md). В приложении укажи публичный репозиторий в формате `владелец/репозиторий`, например `ReyRizuko/doroshka`, затем нажми «Проверить».
 
-Cloudflare имеет лимиты бесплатного тарифа и платные условия сверх них; это не безлимитное хранилище. GitHub Pages сам по себе backend и аудиофайлы не хранит.
+GitHub Releases имеет ограничения и не является безлимитным музыкальным CDN. Используй его для небольшого каталога и только для аудиозаписей, которые разрешено распространять.
 
-### Альтернативный запуск через Docker
+### Другие варианты backend
 
-Старый вариант backend на FastAPI тоже сохранён в `music-server/`. Он подходит для VPS или другого Docker-хостинга, если такой появится.
+Старый backend FastAPI в `music-server/` и экспериментальная конфигурация Cloudflare в `cloudflare/` сохранены как альтернативы. Для текущего варианта Doroshka Music они не требуются.
 
 ### Добавление музыки
 
