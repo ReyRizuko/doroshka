@@ -1,3 +1,5 @@
+> **Важно:** это устаревший экспериментальный вариант. Для текущего запуска Doroshka Music Cloudflare не нужен: используется публичный GitHub Releases. Открой [инструкцию GitHub Releases](../releases/README.md). Следующие шаги ниже нужны только если ты сознательно выбираешь Cloudflare и имеешь доступ к требуемым ресурсам и настройкам оплаты.
+
 # Doroshka Music API — Cloudflare deployment
 
 This service does not need a VPS or an always-on computer. Cloudflare runs the API; D1 stores track metadata and R2 stores audio files.
