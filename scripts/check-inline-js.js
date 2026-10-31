@@ -49,6 +49,22 @@ const majorCatalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-
 if (!fs.existsSync(majorCatalogFile)) {
   throw new Error('Apple Music / Spotify catalog adapter is missing from www/sources');
 }
-new vm.Script(fs.readFileSync(majorCatalogFile, 'utf8'), { filename: 'www/sources/dorozhka-major-catalogs.js' });
+const majorCatalogSource = fs.readFileSync(majorCatalogFile, 'utf8');
+new vm.Script(majorCatalogSource, { filename: 'www/sources/dorozhka-major-catalogs.js' });
 
-console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels and major catalog adapters verified.');
+for (const token of ['function queueMajorTrack', 'function syncExternalState', 'var externalProvider', 'DorozhkaMajorCatalogs.seek']) {
+  if (!html.includes(token)) {
+    throw new Error('Unified player integration is missing: ' + token);
+  }
+}
+for (const token of ['function play(provider,id)', 'function pause(provider)', 'function resume(provider)',
+  'function seek(provider,seconds)', 'function setVolume(provider,value)', 'function getState(provider)']) {
+  if (!majorCatalogSource.includes(token)) {
+    throw new Error('Major catalog playback API is missing: ' + token);
+  }
+}
+if (majorCatalogSource.includes("root.open(item.url")) {
+  throw new Error('Major catalog playback must not fall back to an external track link.');
+}
+
+console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels, major catalog adapters and unified playback controls verified.');
