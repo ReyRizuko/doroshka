@@ -1356,15 +1356,15 @@ def add_maven_mirrors(path):
         return
     if path.endswith(".kts"):
         mirror_lines = (
-            '        maven("https://repo1.maven.org/maven2")\\n'
-            '        maven("https://maven-central.storage-download.googleapis.com/maven2/")\\n'
+            '        maven("https://repo1.maven.org/maven2")\n'
+            '        maven("https://maven-central.storage-download.googleapis.com/maven2/")\n'
         )
     else:
         mirror_lines = (
-            '        maven { url "https://repo1.maven.org/maven2" }\\n'
-            '        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }\\n'
+            '        maven { url "https://repo1.maven.org/maven2" }\n'
+            '        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }\n'
         )
-    source, count = re.subn(r"(\\brepositories\\s*\\{)", lambda match: match.group(1) + "\\n" + mirror_lines, source)
+    source, count = re.subn(r"(\brepositories\s*\{)", lambda match: match.group(1) + "\n" + mirror_lines, source)
     if count:
         with open(path, "w", encoding="utf-8") as f:
             f.write(source)
