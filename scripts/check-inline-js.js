@@ -26,7 +26,8 @@ for (const name of sourceNames) {
   }
 }
 
-for (const id of ['yt-form', 'ym-form', 'sc-form', 'apple-form', 'deezer-form', 'bandcamp-form', 'vk-form', 'web-form']) {
+for (const id of ['yt-form', 'ym-form', 'sc-form', 'apple-form', 'deezer-form', 'bandcamp-form', 'vk-form', 'web-form',
+  'apple-token-form', 'spotify-config-form', 'spotify-connect', 'global-apple-slot', 'global-spotify-slot']) {
   if (!html.includes('id="' + id + '"')) {
     throw new Error('Missing provider search form: ' + id);
   }
@@ -44,4 +45,10 @@ if (!fs.existsSync(catalogFile)) {
 }
 new vm.Script(fs.readFileSync(catalogFile, 'utf8'), { filename: 'www/sources/dorozhka-catalog.js' });
 
-console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels verified.');
+const majorCatalogFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-major-catalogs.js');
+if (!fs.existsSync(majorCatalogFile)) {
+  throw new Error('Apple Music / Spotify catalog adapter is missing from www/sources');
+}
+new vm.Script(fs.readFileSync(majorCatalogFile, 'utf8'), { filename: 'www/sources/dorozhka-major-catalogs.js' });
+
+console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels and major catalog adapters verified.');
