@@ -457,6 +457,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     static volatile short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
     private boolean prepared = false;
     private boolean wantPlay = false;
+    private boolean completed = false;
     private boolean pausedByFocus = false;
     private boolean foreground = false;
     private int errRun = 0;
@@ -655,6 +656,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (i < 0 || i >= queue.size()) return;
         index = i;
         wantPlay = play;
+        completed = false;
         pausedByFocus = false;
         releasePlayer();
         final MediaPlayer p = new MediaPlayer();
@@ -749,6 +751,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             startIndex(0, true);
         } else {
             wantPlay = false;
+            completed = true;
             handler.removeCallbacks(ticker);
             releaseWifiLock();
             abandonFocus();
@@ -866,8 +869,12 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (queue.isEmpty()) return;
         wantPlay = true;
         pausedByFocus = false;
-        if (mp != null && prepared) startPlayback();
-        else if (mp == null && index >= 0) startIndex(index, true);
+        if (mp != null && prepared) {
+            if (completed) {
+                try { mp.seekTo(0); completed = false; } catch (Exception e) { onTrackError(); return; }
+            }
+            startPlayback();
+        } else if (mp == null && index >= 0) startIndex(index, true);
         updateSession();
         updateNotification();
         emitState();
