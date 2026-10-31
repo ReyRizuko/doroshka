@@ -6,6 +6,17 @@ on:
   pull_request:
     branches: [main, master]
 jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install API dependencies
+        run: pip install -r music-server/requirements.txt
+      - name: Check backend syntax
+        run: python -m py_compile music-server/app.py
   apk:
     runs-on: ubuntu-latest
     steps:
