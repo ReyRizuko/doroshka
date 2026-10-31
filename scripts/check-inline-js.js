@@ -89,7 +89,8 @@ const nativeGuards = [
   ['native command dispatch result', 'static boolean post(Runnable r)'],
   ['native command rejection when service is absent', 'call.reject("Android-плеер ещё не запущен")'],
   ['modern Android audio focus request', 'new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)'],
-  ['audio focus release', 'audio.abandonAudioFocusRequest(focusRequest)']
+  ['audio focus release', 'audio.abandonAudioFocusRequest(focusRequest)'],
+  ['stop cleanup uses version-aware focus release', '        abandonFocus();\n        pausedByFocus = false;']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
