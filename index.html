@@ -1328,6 +1328,7 @@ function load(id){
   updateNow();markCurrent();setMedia(it);
 }
 function next(auto){
+  if(Native){if(!auto&&nativeLive)nCall(Native.next());return;}
   if(!order.length)return;
   if(auto&&repeat===2){
     if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});
@@ -1343,6 +1344,7 @@ function next(auto){
   pos=p;load(order[pos]);
 }
 function prev(){
+  if(Native){if(nativeLive)nCall(Native.prev());return;}
   if(!order.length)return;
   var current=externalProvider?externalPos:(Native?nState.pos/1000:audio.currentTime);
   if(current>3){if(externalProvider)window.DorozhkaMajorCatalogs.seek(externalProvider,0).catch(function(){});else if(Native)nCall(Native.seek({ms:0}));else audio.currentTime=0;return;}
