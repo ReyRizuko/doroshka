@@ -1,10 +1,11 @@
 /* Doroshka Music: public GitHub Releases catalog (no VPS, R2 or database). */
 (function(root){
   'use strict';
-  var records=Object.create(null), cache=null, cacheAt=0, CACHE_MS=180000;
+  var records=Object.create(null), cache=null, cacheAt=0, CACHE_MS=180000, DEFAULT_REPO='ReyRizuko/doroshka';
   function base(){
     var value='';
-    try{value=localStorage.getItem('dorozhkaMusicGithubRepo')||'';}catch(e){}
+    try{value=localStorage.getItem('dorozhkaMusicGithubRepo');}catch(e){}
+    if(!value) value=DEFAULT_REPO;
     return value.trim();
   }
   function validRepo(value){
