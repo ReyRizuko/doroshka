@@ -436,6 +436,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private int index = -1;
     private MediaPlayer mp;
     private Equalizer equalizer;
+    private Bitmap remoteArtwork;
+    private String remoteArtworkId = "";
     static volatile boolean equalizerEnabled = true;
     static volatile short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
     private boolean prepared = false;
@@ -581,6 +583,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
         errRun = 0;
         startIndex(idx, true);
+        loadRemoteArtwork(current());
     }
 
     private Item current() {
@@ -847,6 +850,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             if (item.id.equals(id)) {
                 item.art = art == null ? "" : art;
                 if (item == current()) {
+                    loadRemoteArtwork(item);
                     updateSession();
                     updateNotification();
                 }
@@ -984,35 +988,13 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     // ---------- медиасессия и уведомление ----------
     private Bitmap artwork(Item it) {
-        if (it == null || it.art == null || it.art.isEmpty()) return null;
+        if (it == null) return null;
+        if (it.id.equals(remoteArtworkId) && remoteArtwork != null) return remoteArtwork;
+        if (it.art == null || !it.art.startsWith("data:image/")) return null;
         try {
-            byte[] bytes;
-            if (it.art.startsWith("data:image/")) {
-                int comma = it.art.indexOf(',');
-                if (comma < 0) return null;
-                bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
-            } else if (it.art.startsWith("https://")) {
-                HttpURLConnection connection = (HttpURLConnection) new URL(it.art).openConnection();
-                connection.setConnectTimeout(4000);
-                connection.setReadTimeout(5000);
-                connection.setInstanceFollowRedirects(true);
-                connection.setRequestProperty("User-Agent", "Dorozhka Android");
-                try {
-                    int status = connection.getResponseCode();
-                    if (status < 200 || status >= 300) return null;
-                    java.io.InputStream input = connection.getInputStream();
-                    try {
-                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
-                        byte[] buffer = new byte[8192];
-                        int count, total = 0;
-                        while ((count = input.read(buffer)) != -1 && total < 3145728) {
-                            output.write(buffer, 0, count);
-                            total += count;
-                        }
-                        bytes = output.toByteArray();
-                    } finally { input.close(); }
-                } finally { connection.disconnect(); }
-            } else return null;
+            int comma = it.art.indexOf(',');
+            if (comma < 0) return null;
+            byte[] bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
@@ -1031,6 +1013,59 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             }
             return bitmap;
         } catch (Exception ignored) { return null; }
+    }
+
+    private void loadRemoteArtwork(final Item item) {
+        if (item == null || item.art == null || !item.art.startsWith("https://")) return;
+        final String requestedUrl = item.art;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                HttpURLConnection connection = null;
+                try {
+                    connection = (HttpURLConnection) new URL(requestedUrl).openConnection();
+                    connection.setConnectTimeout(5000);
+                    connection.setReadTimeout(7000);
+                    connection.setInstanceFollowRedirects(true);
+                    connection.setRequestProperty("User-Agent", "Dorozhka Android");
+                    if (connection.getResponseCode() < 200 || connection.getResponseCode() >= 300) return;
+                    java.io.InputStream input = connection.getInputStream();
+                    byte[] bytes;
+                    try {
+                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[8192];
+                        int count, total = 0;
+                        while ((count = input.read(buffer)) != -1 && total < 3145728) {
+                            output.write(buffer, 0, count);
+                            total += count;
+                        }
+                        bytes = output.toByteArray();
+                    } finally { input.close(); }
+                    BitmapFactory.Options bounds = new BitmapFactory.Options();
+                    bounds.inJustDecodeBounds = true;
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+                    int sample = 1;
+                    while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 256) sample *= 2;
+                    BitmapFactory.Options opts = new BitmapFactory.Options();
+                    opts.inSampleSize = sample;
+                    final Bitmap decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+                    if (decoded == null) return;
+                    handler.post(new Runnable() {
+                        @Override public void run() {
+                            if (current() != null && current().id.equals(item.id)) {
+                                if (remoteArtwork != null) remoteArtwork.recycle();
+                                remoteArtwork = decoded;
+                                remoteArtworkId = item.id;
+                                updateSession();
+                                updateNotification();
+                            } else decoded.recycle();
+                        }
+                    });
+                } catch (Exception ignored) {
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            }
+        }, "DorozhkaArtwork").start();
     }
 
     private void updateSession() {
@@ -1167,6 +1202,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     public void onDestroy() {
         instance = null;
         handler.removeCallbacks(ticker);
+        if (remoteArtwork != null) { remoteArtwork.recycle(); remoteArtwork = null; }
         try {
             unregisterReceiver(noisy);
         } catch (Exception ignored) {
