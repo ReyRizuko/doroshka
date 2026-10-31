@@ -1776,14 +1776,14 @@ $('#global-music-slot').addEventListener('click',async function(e){
   var row=b.closest('[data-music]');if(!row)return;
   var t=window.DorozhkaCatalog.get(row.dataset.music);if(!t)return;
   var id=await addRemoteRec({id:'dm'+t.id,name:'dorozhka-music:'+t.id,size:0,title:t.title,artist:t.creator||'',album:t.album||'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
-  playIds(sorted().map(function(x){return x.id;}),id);
+  var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);
 });
 $('#global-dorozhka-slot').addEventListener('click',async function(e){
   var b=e.target.closest('[data-act=dsplay]');if(!b)return;
   var row=b.closest('[data-ds]');if(!row)return;
   var t=window.DorozhkaSource.get(row.dataset.ds);if(!t)return;
   var id=await addRemoteRec({id:'ds'+t.id,name:'audius:'+t.id,size:0,title:t.title,artist:t.creator||'',album:'',blob:null,cover:null,remoteUrl:t.url,coverRemote:t.thumbnail||'',dur:t.duration||0});
-  playIds(sorted().map(function(x){return x.id;}),id);
+  var ids=baseList.length?baseList.slice():[];if(ids.indexOf(id)<0)ids.push(id);playIds(ids,id);
 });
 async function queueMajorTrack(provider,trackId){
   var t=provider==='Apple Music'?window.DorozhkaMajorCatalogs.getApple(trackId):window.DorozhkaMajorCatalogs.getSpotify(trackId);
