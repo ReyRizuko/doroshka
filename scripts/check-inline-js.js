@@ -94,4 +94,4 @@ if ((nativeSetupSource.match(/if \(m != mp\) return;/g) || []).length < 2) {
   throw new Error('Native completion and error callbacks must both reject stale players.');
 }
 
-console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels, major catalog adapters and unified playback controls verified.');
+console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels, major catalog adapters, unified playback controls and native Android guards verified.');
