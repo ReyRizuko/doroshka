@@ -1,96 +1,39 @@
-/* Dorozhka Source — first-party catalog adapter.
- * Searches Openverse's openly licensed audio index. It does not host or mirror tracks.
- * Playback URLs are returned by the upstream provider; attribution/license metadata stays visible.
- */
+/* Дорожка: собственный адаптер каталога Internet Archive. */
 (function (root) {
   'use strict';
-  var API = 'https://api.openverse.org/v1/audio/';
+  var API = 'https://archive.org';
   var records = Object.create(null);
-  var LICENSES = 'by,by-sa,by-nc,by-nc-sa,cc0,pdm';
-  function clean(value) {
-    return String(value || '').replace(/[\u0000-\u001f]/g, ' ').trim();
-  }
-  function searchTerms(query) {
-    var q = clean(query);
-    var aliases = {
-      'медкид': ['медкид', 'madk1d'],
-      'тёмный принц': ['тёмный принц', 'darkprinceee'],
-      'темный принц': ['темный принц', 'darkprinceee'],
-      'кишлак': ['кишлак', 'kishlak'],
-      'зоха': ['зоха', 'zoha'],
-      'апфс': ['апфс', 'автостопом по фазе сна'],
-      'auratoshi': ['auratoshi']
-    };
-    var key = q.toLocaleLowerCase('ru');
-    return aliases[key] || [q];
-  }
-  function request(term) {
-    var params = new URLSearchParams({
-      q: term,
-      category: 'music',
-      page_size: '20',
-      filter_dead: 'true',
-      mature: 'false',
-      license: LICENSES
-    });
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
-    return fetch(API + '?' + params.toString(), {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-      signal: controller ? controller.signal : undefined
-    }).then(function (response) {
-      if (!response.ok) throw new Error('Openverse HTTP ' + response.status + (response.status === 429 ? ' (лимит запросов)' : ''));
-      return response.json();
-    }).then(function (payload) {
-      return Array.isArray(payload.results) ? payload.results : [];
-    }).finally(function () {
-      if (timer) clearTimeout(timer);
-    });
-  }
-  function normalize(item) {
-    if (!item || !item.id || !item.url) return null;
-    var url = clean(item.url);
-    if (!/^https:\/\//i.test(url)) return null;
-    var record = {
-      id: String(item.id),
-      title: clean(item.title) || 'Без названия',
-      creator: clean(item.creator),
-      url: url,
-      thumbnail: /^https:\/\//i.test(item.thumbnail || '') ? item.thumbnail : '',
-      duration: Math.max(0, Math.round((Number(item.duration) || 0) / 1000)),
-      license: clean(item.license),
-      licenseVersion: clean(item.license_version),
-      licenseUrl: clean(item.license_url),
-      provider: clean(item.provider || item.source),
-      landing: clean(item.foreign_landing_url),
-      attribution: clean(item.attribution)
-    };
-    records[record.id] = record;
-    return record;
-  }
-  function search(query) {
-    var terms = searchTerms(query).slice(0, 2);
-    // One fast request first; only try the common Latin/Cyrillic alias if it returned nothing.
-    return request(terms[0]).then(function (first) {
-      var primary = first.map(normalize).filter(Boolean);
-      if (primary.length || terms.length < 2) return primary;
-      return request(terms[1]).then(function (second) {
-        return second.map(normalize).filter(Boolean);
-      });
-    }).then(function (results) {
-      var seen = Object.create(null);
-      results = results.filter(function (record) {
-        if (seen[record.id]) return false;
-        seen[record.id] = true;
-        return true;
-      });
-      return results.slice(0, 30);
-    });
-  }
-  root.DorozhkaSource = {
-    name: 'Дорожка · открытый каталог',
-    search: search,
-    get: function (id) { return records[id] || null; }
+  function clean(v) { return String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim(); }
+  var aliases = {
+    'медкид':['медкид','madk1d'], 'тёмный принц':['тёмный принц','darkprinceee'],
+    'темный принц':['темный принц','darkprinceee'], 'кишлак':['кишлак','kishlak'],
+    'ярче солнца':['ярче солнца'], 'зоха':['зоха','zoha'], 'апфс':['апфс','автостопом по фазе сна'],
+    'конец солнечных дней':['конец солнечных дней'], 'auratoshi':['auratoshi']
   };
+  function terms(q) { var v=clean(q).toLocaleLowerCase('ru'); return aliases[v] || [clean(q)]; }
+  function searchOne(q) {
+    var params = new URLSearchParams();
+    params.set('q','('+q+') AND mediatype:audio');
+    ['identifier','title','creator','description'].forEach(function(k){params.append('fl[]',k);});
+    params.set('rows','25'); params.set('sort[]','downloads desc'); params.set('output','json');
+    return fetch(API+'/advancedsearch.php?'+params.toString(),{headers:{Accept:'application/json'},cache:'no-store'})
+      .then(function(r){if(!r.ok)throw new Error('Internet Archive HTTP '+r.status);return r.json();})
+      .then(function(j){return (j.response&&j.response.docs)||[];});
+  }
+  function search(q) {
+    var list=terms(q).slice(0,4);
+    return Promise.all(list.map(function(t){return searchOne(t).catch(function(){return [];});})).then(function(sets){
+      var seen=Object.create(null),out=[];
+      sets.forEach(function(set){set.forEach(function(d){
+        if(!d||!d.identifier||seen[d.identifier])return;
+        seen[d.identifier]=1;
+        var x={id:String(d.identifier),title:clean(d.title)||String(d.identifier),
+          creator:Array.isArray(d.creator)?clean(d.creator[0]):clean(d.creator),
+          description:clean(d.description),provider:'Internet Archive',landing:'https://archive.org/details/'+encodeURIComponent(d.identifier)};
+        records[x.id]=x;out.push(x);
+      });});
+      return out.slice(0,40);
+    });
+  }
+  root.DorozhkaSource={name:'Дорожка · собственный каталог',search:search,get:function(id){return records[id]||null;}};
 }(window));
