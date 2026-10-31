@@ -6,6 +6,9 @@ const www = path.join(root, 'www');
 fs.mkdirSync(path.join(www, 'vendor'), { recursive: true });
 fs.mkdirSync(path.join(www, 'fonts'), { recursive: true });
 
+// Capacitor webDir должен содержать точку входа приложения.
+fs.copyFileSync(path.join(root, 'index.html'), path.join(www, 'index.html'));
+
 const tags = path.join(root, 'node_modules', 'jsmediatags', 'dist', 'jsmediatags.min.js');
 if (fs.existsSync(tags)) fs.copyFileSync(tags, path.join(www, 'vendor', 'jsmediatags.min.js'));
 else console.warn('jsmediatags не найден: обложки и теги из файлов читаться не будут');
