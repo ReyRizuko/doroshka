@@ -130,6 +130,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
+import org.json.JSONArray;
 
 @CapacitorPlugin(name = "Playback")
 public class PlaybackPlugin extends Plugin {
