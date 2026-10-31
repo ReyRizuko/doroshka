@@ -1790,7 +1790,9 @@ $('#global-spotify-slot').addEventListener('click',async function(e){
   var appleInput=$('#apple-token-in'),appleStatus=$('#apple-catalog-status');
   var spotifyId=$('#spotify-client-id-in'),spotifyRedirect=$('#spotify-redirect-in'),spotifyStatus=$('#spotify-catalog-status');
   appleInput.value=api.appleBase();
-  var saved=api.spotifyBase();spotifyId.value=saved.clientId;spotifyRedirect.value=saved.redirectUri;
+  var saved=api.spotifyBase();
+  spotifyId.value=saved.clientId;
+  spotifyRedirect.value=saved.redirectUri||(window.SpotifyOAuth?'doroshka://spotify-callback':window.location.href.split('?')[0].split('#')[0]);
   $('#apple-token-form').addEventListener('submit',function(e){
     e.preventDefault();
     try{api.setAppleToken(appleInput.value);appleStatus.textContent=appleInput.value.trim()?'Apple Music Developer Token сохранён на устройстве.':'Токен очищен.';toast('Настройки Apple Music сохранены');}
