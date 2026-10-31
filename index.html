@@ -671,6 +671,8 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 
 .smart-recs{display:flex;flex-wrap:wrap;gap:7px}
 .smart-rec-chip{padding:9px 12px;border:1px solid rgba(197,244,119,.22);border-radius:999px;background:rgba(197,244,119,.07);color:#d6f4a5;font-size:11px;font-weight:650}
+
+#global-dorozhka-slot .row{grid-template-columns:minmax(0,1fr) auto auto}
 </style>
 </head>
 <body>
@@ -1271,7 +1273,7 @@ function renderLib(){
   var box=$('#lib-list');
   $('#q').hidden=lib.length<8;
   $('#n-fav').textContent=favorites.size;
-  document.querySelectorAll('[data-library-view]').forEach(function(b){
+  document.querySelectorAll('.library-filter[data-library-view]').forEach(function(b){
     var active=b.dataset.libraryView===libraryView;
     b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');
   });
@@ -1849,7 +1851,7 @@ if(Native){
 }
 function setProviderFilter(name){
   activeProvider=name;
-  document.querySelectorAll('[data-provider]').forEach(function(b){
+  document.querySelectorAll('.provider-chip[data-provider]').forEach(function(b){
     var on=b.dataset.provider===name;
     b.classList.toggle('active',on);
     b.setAttribute('aria-pressed',on?'true':'false');
@@ -1948,7 +1950,9 @@ $('#home-queue').addEventListener('click',function(e){
   var id=b.dataset.id;if(byId(id))playIds(order.length?order:baseList,id);
 });
 $('#queue-clear').addEventListener('click',function(){
-  baseList=[];order=[];pos=-1;renderHomeShelves();toast('Очередь очищена');
+  if(curId&&Native&&nativeLive){baseList=[curId];order=[curId];pos=0;nativeQueue(true);}
+  else{baseList=[];order=[];pos=-1;}
+  renderHomeShelves();toast('Очередь очищена');
 });
 $('#playlist-import').addEventListener('click',function(){$('#f-list').click();});
 $('#queue-save').addEventListener('click',function(){
