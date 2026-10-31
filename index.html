@@ -755,13 +755,13 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
 
             <div id="global-key-settings">
               <details class="source-settings" open>
-                <summary>Подключить собственный каталог Doroshka Music</summary>
+                <summary>Подключить каталог Doroshka Music через GitHub</summary>
                 <form class="source-form" id="dorozhka-api-form">
-                  <input class="search" id="dorozhka-api-url" type="url" inputmode="url" placeholder="https://music-api.example.com" aria-label="Адрес сервера Doroshka Music">
+                  <input class="search" id="dorozhka-api-url" type="text" inputmode="text" placeholder="ReyRizuko/doroshka" aria-label="Публичный репозиторий GitHub">
                   <button class="btn" type="submit">Сохранить</button>
                   <button class="btn" type="button" id="dorozhka-api-check">Проверить</button>
                 </form>
-                <p class="hint">Укажи HTTPS-адрес развёрнутого сервера. Сам GitHub Pages backend не запускает.</p>
+                <p class="hint">Укажи публичный репозиторий GitHub в формате владелец/репозиторий. Аудиофайлы берутся из его Releases — отдельный сервер и банковская карта не нужны.</p>
                 <div id="dorozhka-api-status" class="status" aria-live="polite"></div>
               </details>
             </div>
@@ -769,7 +769,7 @@ h1,h2,h3,h4,.brand,.tab,.btn{font-family:"Onest",system-ui,-apple-system,"Segoe 
           <div class="global-results">
             <section class="global-result-group" data-provider-group="music">
               <div class="global-result-title"><h4>Doroshka Music</h4><span>собственный серверный каталог</span></div>
-              <div id="global-music-slot"><div class="status">Подключите сервер Doroshka Music в настройках.</div></div>
+              <div id="global-music-slot"><div class="status">Укажите публичный GitHub-репозиторий в настройках каталога.</div></div>
             </section>
             <section class="global-result-group" data-provider-group="dorozhka">
               <div class="global-result-title"><h4>Дорожка · Audius</h4><span>музыкальный каталог с потоковым воспроизведением</span></div>
@@ -1706,8 +1706,8 @@ $('#global-dorozhka-slot').addEventListener('click',async function(e){
     catch(err){status.textContent=err.message||'Некорректный адрес';}
   });
   $('#dorozhka-api-check').addEventListener('click',async function(){
-    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Проверяю сервер…';var result=await window.DorozhkaCatalog.health();status.textContent=result.ok?'Сервер доступен.':'Сервер ответил неожиданным результатом.';}
-    catch(err){status.textContent=err.message||'Не удалось подключиться к серверу';}
+    try{window.DorozhkaCatalog.setBase(input.value);status.textContent='Проверяю репозиторий и Releases…';var result=await window.DorozhkaCatalog.health();status.textContent='GitHub доступен: '+result.tracks+' аудиофайлов в '+result.releases+' релизах.';}
+    catch(err){status.textContent=err.message||'Не удалось прочитать Releases GitHub';}
   });
 }());
 
