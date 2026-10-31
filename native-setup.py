@@ -415,6 +415,8 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import com.getcapacitor.JSObject;
 import java.util.ArrayList;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
