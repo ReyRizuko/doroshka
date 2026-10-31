@@ -76,7 +76,11 @@ const nativeGuards = [
   ['completion callback', 'onTrackEnd();'],
   ['error callback', 'onTrackError();'],
   ['stale player identity', 'if (m != mp) return;'],
-  ['stale prepare failure', 'if (p != mp) return;']
+  ['stale prepare failure', 'if (p != mp) return;'],
+  ['service startup command queue', 'static void prepareStart()'],
+  ['deferred native controls', 'pendingCommands.add(r)'],
+  ['native service startup drain', 'for (Runnable command : pendingCommands) handler.post(command);'],
+  ['startup failure cleanup', 'static void cancelStart()']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
