@@ -90,7 +90,9 @@ const nativeGuards = [
   ['native command rejection when service is absent', 'call.reject("Android-плеер ещё не запущен")'],
   ['modern Android audio focus request', 'new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)'],
   ['audio focus release', 'audio.abandonAudioFocusRequest(focusRequest)'],
-  ['stop cleanup uses version-aware focus release', '        abandonFocus();\n        pausedByFocus = false;']
+  ['stop cleanup uses version-aware focus release', '        abandonFocus();\n        pausedByFocus = false;'],
+  ['focus denial releases Wi-Fi lock', 'if (!requestFocus()) {\n            wantPlay = false;\n            releaseWifiLock();'],
+  ['repeat-one reacquires audio focus', 'mp.seekTo(0);\n                startPlayback();']
 ];
 for (const [label, token] of nativeGuards) {
   if (!nativeSetupSource.includes(token)) {
