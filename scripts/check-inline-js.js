@@ -32,4 +32,10 @@ for (const id of ['yt-form', 'ym-form', 'sc-form', 'apple-form', 'deezer-form', 
   }
 }
 
+const sourceFile = path.join(__dirname, '..', 'www', 'sources', 'dorozhka-source.js');
+if (!fs.existsSync(sourceFile)) {
+  throw new Error('Dorozhka source adapter is missing from www/sources');
+}
+new vm.Script(fs.readFileSync(sourceFile, 'utf8'), { filename: 'www/sources/dorozhka-source.js' });
+
 console.log('Inline JavaScript syntax OK; ' + sourceNames.length + ' source panels verified.');
