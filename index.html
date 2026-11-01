@@ -375,7 +375,7 @@ body{padding-top:18px;background:
   .controls .ib.big{width:54px;height:54px}
   .vol{display:none}
   .side{gap:13px}
-  .tabs{position:fixed;z-index:24;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:7px 8px;min-height:62px;border-radius:19px;background:rgba(20,25,36,.96);backdrop-filter:blur(24px);box-shadow:0 12px 40px rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.12)}
+  .tabs{display:none!important;position:fixed;z-index:24;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:7px 8px;min-height:62px;border-radius:19px;background:rgba(20,25,36,.96);backdrop-filter:blur(24px);box-shadow:0 12px 40px rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.12)}
   .tab{min-height:46px;flex-direction:column;gap:1px;font-size:10px}
   .tab-icon{font-size:17px}
   .tab small{display:none}
@@ -2063,7 +2063,7 @@ function renderOwnCatalog(list){
  var slot=$('#global-own-slot');
  if(!list.length){slot.innerHTML='';return;}
  slot.innerHTML=list.map(function(t){
-  var detail=[t.creator||'Исполнитель не указан',t.album||'Doroshka Music',t.license||''].filter(Boolean).join(' · ');
+  var detail=[t.creator||'Исполнитель не указан',t.album||''].filter(Boolean).join(' · ');
   return '<div class="row" data-own-track="'+esc(t.id)+'"><button class="row-main" data-act="own-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(detail)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="own-queue" aria-label="Добавить в очередь">＋</button></div>';
  }).join('');
 }
@@ -2071,14 +2071,14 @@ function renderMusic(list){
   var slot=$('#global-music-slot');
   if(!list.length){slot.innerHTML='';return;}
   slot.innerHTML=list.map(function(t){
-    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||'Jamendo'].join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-music" aria-label="Добавить в очередь">＋</button></div>';
+    return '<div class="row" data-music="'+esc(t.id)+'"><button class="row-main" data-act="music-play" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc([t.creator||'Исполнитель не указан',t.album||''].filter(Boolean).join(' · '))+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-music" aria-label="Добавить в очередь">＋</button></div>';
   }).join('');
 }
 function renderDorozhka(list){
   var slot=$('#global-dorozhka-slot');
   if(!list.length){slot.innerHTML='';return;}
   slot.innerHTML=list.map(function(t){
-    var details=[t.creator||'Исполнитель не указан','Audius'].join(' · ');
+    var details=[t.creator||'Исполнитель не указан',t.album||''].filter(Boolean).join(' · ');
     var landing=t.permalink&&/^https:\/\//i.test(t.permalink)?'<a class="x" href="'+esc(t.permalink)+'" target="_blank" rel="noopener" aria-label="Открыть трек в Audius">↗</a>':'';
     return '<div class="row" data-ds="'+esc(t.id)+'"><button class="row-main" data-act="dsplay" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="queue-ds" aria-label="Добавить в очередь">＋</button>'+landing+'</div>';
   }).join('');
@@ -2088,7 +2088,7 @@ function renderMajorCatalog(slotId,list,provider){
   if(!list.length){slot.innerHTML='';return;}
   slot.innerHTML=list.map(function(t){
     var attr=provider==='Apple Music'?'data-apple-track':'data-spotify-track';
-    var details=[t.creator||'Исполнитель не указан',t.album||provider].join(' · ');
+    var details=[t.creator||'Исполнитель не указан',t.album||''].filter(Boolean).join(' · ');
     return '<div class="row" '+attr+'="'+esc(t.id)+'"><button class="row-main" data-act="major-play" data-provider="'+esc(provider)+'" aria-label="Играть: '+esc(t.title)+'">'+thumb({title:t.title,artist:t.creator,coverUrl:t.thumbnail},false)+'<span class="rt"><b>'+esc(t.title)+'</b><small>'+esc(details)+'</small></span><span class="dur">'+(t.duration?fmt(t.duration):'')+'</span></button><button class="x" data-act="major-queue" data-provider="'+esc(provider)+'" aria-label="Добавить в очередь">＋</button></div>';
   }).join('');
 }
@@ -2097,7 +2097,7 @@ async function runGlobalSearch(q){
   if(!q)return;
   var seq=++globalSearchSeq;
   $('#global-q').value=q;
-  $('#global-status').textContent='Ищу во всех подключённых каталогах…';
+  $('#global-status').textContent='Ищу в музыкальной библиотеке…';
   $('#web-res').innerHTML='';
   $('#global-music-slot').innerHTML='<div class="status">Ищу в Jamendo…</div>';
   $('#global-dorozhka-slot').innerHTML='<div class="status">Ищу в Audius…</div>';
