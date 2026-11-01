@@ -53,6 +53,31 @@ def connect():
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    db.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS tracks_fts USING fts5(
+            id UNINDEXED, title, artist, album, genre,
+            tokenize='unicode61 remove_diacritics 2'
+        )
+    """)
+    db.execute("""
+        INSERT INTO tracks_fts(id,title,artist,album,genre)
+        SELECT t.id,t.title,t.artist,t.album,t.genre FROM tracks t
+        WHERE NOT EXISTS (SELECT 1 FROM tracks_fts f WHERE f.id=t.id)
+    """)
+    db.executescript("""
+        CREATE TRIGGER IF NOT EXISTS tracks_fts_insert AFTER INSERT ON tracks BEGIN
+          INSERT INTO tracks_fts(id,title,artist,album,genre)
+          VALUES(new.id,new.title,new.artist,new.album,new.genre);
+        END;
+        CREATE TRIGGER IF NOT EXISTS tracks_fts_delete AFTER DELETE ON tracks BEGIN
+          DELETE FROM tracks_fts WHERE id=old.id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS tracks_fts_update AFTER UPDATE ON tracks BEGIN
+          DELETE FROM tracks_fts WHERE id=old.id;
+          INSERT INTO tracks_fts(id,title,artist,album,genre)
+          VALUES(new.id,new.title,new.artist,new.album,new.genre);
+        END;
+    """)
     db.commit()
     return db
 
@@ -89,23 +114,44 @@ def search(q: str = "", limit: int = 40, offset: int = 0):
     offset = max(0, offset)
     db = connect()
     try:
-        if q:
-            pattern = "%" + q.replace("%", r"\%").replace("_", r"\_") + "%"
-            rows = db.execute(
-                """SELECT * FROM tracks
-                   WHERE title LIKE ? ESCAPE '\\'
-                      OR artist LIKE ? ESCAPE '\\'
-                      OR album LIKE ? ESCAPE '\\'
-                      OR genre LIKE ? ESCAPE '\\'
-                   ORDER BY title COLLATE NOCASE LIMIT ? OFFSET ?""",
-                (pattern, pattern, pattern, pattern, limit, offset),
-            ).fetchall()
-        else:
+        if not q:
             rows = db.execute(
                 "SELECT * FROM tracks ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 (limit, offset),
             ).fetchall()
-        total = db.execute("SELECT COUNT(*) FROM tracks").fetchone()[0]
+            total = db.execute("SELECT COUNT(*) FROM tracks").fetchone()[0]
+        else:
+            # Prefix-token search supports both Cyrillic and Latin text.
+            tokens = re.findall(r"[^\W_]+", q.casefold(), flags=re.UNICODE)
+            match_query = " AND ".join('"{}"*'.format(token.replace('"', '""')) for token in tokens)
+            rows = []
+            total = 0
+            if match_query:
+                try:
+                    rows = db.execute(
+                        """SELECT t.* FROM tracks_fts f
+                           JOIN tracks t ON t.id=f.id
+                           WHERE tracks_fts MATCH ?
+                           ORDER BY bm25(tracks_fts, 0, 8.0, 5.0, 2.0, 1.0), t.title COLLATE NOCASE
+                           LIMIT ? OFFSET ?""",
+                        (match_query, limit, offset),
+                    ).fetchall()
+                    total = db.execute(
+                        "SELECT COUNT(*) FROM tracks_fts WHERE tracks_fts MATCH ?",
+                        (match_query,),
+                    ).fetchone()[0]
+                except sqlite3.OperationalError:
+                    pattern = "%" + q.replace("%", r"\%").replace("_", r"\_") + "%"
+                    where = """title LIKE ? ESCAPE '\\'
+                               OR artist LIKE ? ESCAPE '\\'
+                               OR album LIKE ? ESCAPE '\\'
+                               OR genre LIKE ? ESCAPE '\\'"""
+                    args = (pattern, pattern, pattern, pattern)
+                    rows = db.execute(
+                        f"SELECT * FROM tracks WHERE {where} ORDER BY title COLLATE NOCASE LIMIT ? OFFSET ?",
+                        (*args, limit, offset),
+                    ).fetchall()
+                    total = db.execute(f"SELECT COUNT(*) FROM tracks WHERE {where}", args).fetchone()[0]
         return {"items": [track_json(r) for r in rows], "total": total, "limit": limit, "offset": offset}
     finally:
         db.close()
