@@ -15,13 +15,13 @@ The APK is created at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## API endpoint
 
-The app uses the single Doroshka catalog API. Override the API endpoint for a local or production deployment:
+The app uses one first-party Doroshka catalog API. The checked-in URL is a build fallback, not proof that a live worker is deployed. Set the actual Cloudflare `workers.dev` hostname (or your HTTPS FastAPI host) when building:
 
 ```bash
 gradle assembleDebug -PMUSIC_API_BASE_URL=https://your-worker-subdomain.workers.dev/
 ```
 
-The value must be an HTTPS base URL and must end in `/`. The Cloudflare worker requires its D1 database and R2 audio bucket to be provisioned and bound before catalog requests and streaming work. The FastAPI service in `../music-server` implements the same `/api/v1` contract and can also be used by supplying its HTTPS origin.
+The value must be an HTTPS base URL and must end in `/`. The catalog and streaming will not work until this URL points to a deployed API with its database and audio storage configured. The Cloudflare worker requires its D1 database and R2 audio bucket to be provisioned and bound before catalog requests and streaming work. The FastAPI service in `../music-server` implements the same `/api/v1` contract and can also be used by supplying its HTTPS origin.
 
 ## Catalog and playback
 
