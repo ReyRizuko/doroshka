@@ -24,7 +24,7 @@ class RoomBackedCatalogProvider @Inject constructor(
         if (normalized.isNotEmpty()) {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    api.search(normalized).forEach { dto ->
+                    api.search(normalized).items.forEach { dto ->
                         val source = dto.audioUrl.orEmpty()
                         dao.insertCatalogRows(
                             listOf(
@@ -34,7 +34,7 @@ class RoomBackedCatalogProvider @Inject constructor(
                                     artist = dto.artist,
                                     audioUrl = source,
                                     imageUrl = dto.imageUrl,
-                                    durationMs = dto.durationMs
+                                    durationMs = (dto.durationSeconds * 1000.0).toLong()
                                 )
                             )
                         )
@@ -57,7 +57,7 @@ class RoomBackedCatalogProvider @Inject constructor(
     override fun getTrending(): Flow<List<CatalogTrack>> = flow {
         runCatching {
             withContext(Dispatchers.IO) {
-                api.trending().forEach { dto ->
+                api.trending().items.forEach { dto ->
                     val source = dto.audioUrl.orEmpty()
                     dao.insertCatalogRows(
                         listOf(
