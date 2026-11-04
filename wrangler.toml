@@ -9,10 +9,7 @@ database_name = "doroshka-music"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
 migrations_dir = "cloudflare/migrations"
 
-[[r2_buckets]]
-binding = "AUDIO"
-bucket_name = "doroshka-music-audio"
-
 [vars]
 ALLOWED_ORIGINS = "*"
+AUDIO_SOURCE_HOSTS = "upload.wikimedia.org"
 MAX_UPLOAD_BYTES = "104857600"
