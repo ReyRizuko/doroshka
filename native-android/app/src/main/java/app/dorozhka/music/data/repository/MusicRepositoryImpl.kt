@@ -33,8 +33,13 @@ class MusicRepositoryImpl @Inject constructor(
                 val remote = api.getTrending().items.map { it.toDomain(baseUrl) }
                 if (remote.isNotEmpty()) {
                     val merged = remote.map { track ->
-                        val liked = dao.getById(track.id)?.isLiked ?: false
-                        TrackEntity.fromDomain(track.copy(isLiked = liked))
+                        val existing = dao.getById(track.id)
+                        TrackEntity.fromDomain(
+                            track.copy(
+                                isLiked = existing?.isLiked ?: false,
+                                localCachePath = existing?.localCachePath
+                            )
+                        )
                     }
                     dao.upsertAll(merged)
                 }
