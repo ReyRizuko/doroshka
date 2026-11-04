@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.Executor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +40,8 @@ class PlayerConnection @Inject constructor(
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
     private var controller: MediaController? = null
+    private var pendingQueue: Pair<List<Track>, Int>? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) = publish()
         override fun onPlaybackStateChanged(playbackState: Int) = publish()
@@ -50,9 +58,13 @@ class PlayerConnection @Inject constructor(
             runCatching { future.get() }.onSuccess { mediaController ->
                 controller = mediaController
                 mediaController.addListener(listener)
+                pendingQueue?.let { (tracks, index) -> pendingQueue = null; playQueue(tracks, index) }
                 publish()
             }
         }, Executor { it.run() })
+        scope.launch {
+            while (isActive) { publish(); delay(500) }
+        }
     }
 
     private fun publish() {
@@ -82,7 +94,8 @@ class PlayerConnection @Inject constructor(
     }
 
     fun playQueue(tracks: List<Track>, startIndex: Int = 0) {
-        val p = controller ?: return
+        val p = controller
+        if (p == null) { pendingQueue = tracks to startIndex; return }
         val items = tracks.map { track ->
             MediaItem.Builder()
                 .setMediaId(track.id)
