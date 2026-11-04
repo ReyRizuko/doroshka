@@ -91,8 +91,7 @@ class MusicViewModel @Inject constructor(
                 } else {
                     loading.value = true
                     error.value = null
-                    searchTracks(term).catch { error.value = it.message }.collect { results.value = it }
-                    loading.value = false
+                    searchTracks(term).catch { error.value = it.message }.collect { results.value = it; loading.value = false }
                 }
             }
         }
