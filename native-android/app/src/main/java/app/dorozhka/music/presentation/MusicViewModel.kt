@@ -102,7 +102,6 @@ class MusicViewModel @Inject constructor(
                             error.value = null
                         }
                         .catch {
-                            results.value = emptyList()
                             error.value = it.message?.takeIf(String::isNotBlank)
                                 ?: "Не удалось подключиться к каталогу. Проверь адрес сервера."
                         }
