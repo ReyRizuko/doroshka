@@ -57,7 +57,7 @@ async function route(request, env) {
     ]);
     return response(request, env, JSON.stringify({ items: (items.results || []).map(publicTrack), total: total.total, limit, offset }), 200, JSON_HEADERS);
   }
-  const streamInfoMatch = path.match(/^\\/api\\/v1\\/tracks\\/([a-f0-9-]+)\\/stream-info$/i);
+  const streamInfoMatch = path.match(/^\/api\/v1\/tracks\/([a-f0-9-]+)\/stream-info$/i);
   if (request.method === "GET" && streamInfoMatch) {
     const row = await env.DB.prepare("SELECT id FROM tracks WHERE id=?").bind(streamInfoMatch[1]).first();
     if (!row) return response(request, env, JSON.stringify({ error: "Track not found" }), 404, JSON_HEADERS);
