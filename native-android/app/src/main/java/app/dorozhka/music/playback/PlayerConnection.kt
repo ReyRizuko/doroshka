@@ -22,6 +22,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.File
 
 data class PlaybackUiState(
     val currentTrack: Track? = null,
@@ -110,7 +111,13 @@ class PlayerConnection @Inject constructor(
         val items = tracks.map { track ->
             MediaItem.Builder()
                 .setMediaId(track.id)
-                .setUri(track.audioUrl)
+                .setUri(
+                    track.localCachePath
+                        ?.let(::File)
+                        ?.takeIf(File::isFile)
+                        ?.let(android.net.Uri::fromFile)
+                        ?: android.net.Uri.parse(track.audioUrl)
+                )
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(track.title)
