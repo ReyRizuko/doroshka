@@ -1,5 +1,6 @@
 package app.dorozhka.music.presentation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -69,6 +71,12 @@ fun MusicApp(viewModel: MusicViewModel = hiltViewModel()) {
     val route = backStack?.destination?.route
     val onEvent: (MusicEvent) -> Unit = viewModel::onEvent
 
+    BackHandler(enabled = route == Destinations.PLAYER) {
+        if (!nav.popBackStack()) {
+            nav.navigate(Destinations.HOME) { launchSingleTop = true }
+        }
+    }
+
     Scaffold(
         containerColor = Color(0xFF08090C),
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -110,7 +118,19 @@ fun MusicApp(viewModel: MusicViewModel = hiltViewModel()) {
                 LibraryScreen(state, onEvent) { nav.navigate(Destinations.PLAYER) }
             }
             composable(Destinations.PLAYER) {
-                PlayerScreen(state, onEvent) { nav.popBackStack() }
+                PlayerScreen(
+                    state = state,
+                    onEvent = onEvent,
+                    onBack = {
+                        if (!nav.popBackStack()) nav.navigate(Destinations.HOME) { launchSingleTop = true }
+                    },
+                    onHome = {
+                        nav.navigate(Destinations.HOME) {
+                            popUpTo(Destinations.HOME) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
         }
     }
@@ -163,7 +183,7 @@ private fun HomeScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, openP
             }
         }
         items(state.trending, key = { it.id }) { track ->
-            TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.trending)) }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
+            TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.trending)); openPlayer() }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
         }
     }
 }
@@ -185,12 +205,13 @@ private fun SearchScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, ope
         Spacer(Modifier.height(16.dp))
         when {
             state.isLoading -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            state.query.isBlank() -> Text("Ищи музыку в едином каталоге Дорожки", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            state.searchResults.isEmpty() -> Text(state.error ?: "Ничего не найдено", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            state.query.isBlank() -> Text("Ищи музыку в каталоге Дорожки", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            state.error != null -> Text("Ошибка каталога: ${state.error}", color = MaterialTheme.colorScheme.error)
+            state.searchResults.isEmpty() -> Text("Ничего не найдено", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(state.searchResults, key = { it.id }) { track ->
-                TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.searchResults)) }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
+                TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.searchResults)); openPlayer() }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
             }
         }
     }
@@ -207,7 +228,7 @@ private fun LibraryScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, op
         item { Text("Избранное", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         if (state.likedTracks.isEmpty()) item { Text("Отмечай треки сердцем — они появятся здесь.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(state.likedTracks, key = { it.id }) { track ->
-            TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.likedTracks)) }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
+            TrackRow(track, onPlay = { onEvent(MusicEvent.PlayTrack(track, state.likedTracks)); openPlayer() }, onLike = { onEvent(MusicEvent.ToggleLike(track.id)) })
         }
     }
 }
@@ -253,7 +274,7 @@ private fun MiniPlayer(playback: app.dorozhka.music.playback.PlaybackUiState, on
 }
 
 @Composable
-private fun PlayerScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, onBack: () -> Unit) {
+private fun PlayerScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, onBack: () -> Unit, onHome: () -> Unit) {
     val playback = state.playback
     val track = playback.currentTrack
     if (track == null) {
@@ -268,11 +289,18 @@ private fun PlayerScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, onB
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("‹", Modifier.clickable(onClick = onBack), style = MaterialTheme.typography.headlineLarge)
+            Text("‹", Modifier.clickable(onClick = onBack).padding(horizontal = 8.dp), style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.weight(1f))
             Text("СЕЙЧАС ИГРАЕТ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text("•••", color = Color.Gray)
+            Row(
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onHome).padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.Home, contentDescription = "На главную", tint = Color.White)
+                Spacer(Modifier.width(4.dp))
+                Text("Главная", color = Color.White, style = MaterialTheme.typography.labelMedium)
+            }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             AsyncImage(
