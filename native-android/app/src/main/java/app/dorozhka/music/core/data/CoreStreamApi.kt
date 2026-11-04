@@ -1,5 +1,6 @@
 package app.dorozhka.music.core.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -10,9 +11,15 @@ data class CatalogTrackResponse(
     val id: String,
     val title: String,
     val artist: String,
-    val durationMs: Long = 0,
-    val imageUrl: String? = null,
-    val audioUrl: String? = null
+    @SerialName("duration") val durationSeconds: Double = 0.0,
+    @SerialName("cover_url") val imageUrl: String? = null,
+    @SerialName("stream_url") val audioUrl: String? = null
+)
+
+@Serializable
+data class CatalogSearchResponse(
+    val items: List<CatalogTrackResponse> = emptyList(),
+    val total: Int = 0
 )
 
 @Serializable
@@ -23,11 +30,17 @@ data class StreamResolutionResponse(
 
 interface CoreStreamApi {
     @GET("api/v1/search")
-    suspend fun search(@Query("q") query: String): List<CatalogTrackResponse>
+    suspend fun search(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 50
+    ): CatalogSearchResponse
 
-    @GET("api/v1/trending")
-    suspend fun trending(): List<CatalogTrackResponse>
+    @GET("api/v1/search")
+    suspend fun trending(
+        @Query("q") query: String = "",
+        @Query("limit") limit: Int = 40
+    ): CatalogSearchResponse
 
-    @GET("api/v1/tracks/{id}/stream")
+    @GET("api/v1/tracks/{id}/stream-info")
     suspend fun resolveStream(@Path("id") trackId: String): StreamResolutionResponse
 }
