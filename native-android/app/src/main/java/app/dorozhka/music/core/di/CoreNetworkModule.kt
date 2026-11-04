@@ -3,8 +3,10 @@ package app.dorozhka.music.core.di
 import app.dorozhka.music.BuildConfig
 import app.dorozhka.music.core.data.CoreStreamApi
 import app.dorozhka.music.core.data.GenericAudioSourceProviderImpl
+import app.dorozhka.music.core.data.RoomBackedCatalogProvider
 import app.dorozhka.music.core.data.TrackDownloadSchedulerImpl
 import app.dorozhka.music.core.domain.AudioSourceProvider
+import app.dorozhka.music.core.domain.CatalogProvider
 import app.dorozhka.music.core.domain.DownloadPermissionProvider
 import app.dorozhka.music.core.domain.TrackDownloadScheduler
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -49,6 +51,9 @@ object CoreNetworkModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class CoreProviderBindings {
+    @Binds @Singleton
+    abstract fun bindCatalogProvider(implementation: RoomBackedCatalogProvider): CatalogProvider
+
     @Binds @Singleton
     abstract fun bindAudioSource(implementation: GenericAudioSourceProviderImpl): AudioSourceProvider
 
