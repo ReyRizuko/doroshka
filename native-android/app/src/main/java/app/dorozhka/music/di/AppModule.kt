@@ -16,11 +16,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -38,8 +38,7 @@ object StorageModule {
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    @Provides @Singleton
-    fun json(): Json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
+    @Provides @Singleton fun json(): Json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     @Provides @Singleton
     fun okHttp(): OkHttpClient = OkHttpClient.Builder()
@@ -49,15 +48,16 @@ object NetworkModule {
         .retryOnConnectionFailure(true)
         .build()
 
+    @Provides @Named("musicBaseUrl") fun baseUrl(): String = BuildConfig.MUSIC_API_BASE_URL
+
     @Provides @Singleton
     fun retrofit(client: OkHttpClient, json: Json): Retrofit {
         val base = BuildConfig.MUSIC_API_BASE_URL
-        require(base.startsWith("https://")) { "MUSIC_API_BASE_URL must use HTTPS" }
-        return Retrofit.Builder()
-            .baseUrl(base)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        require(base.startsWith("https://") && base.endsWith("/")) {
+            "MUSIC_API_BASE_URL must be an HTTPS URL ending with /"
+        }
+        return Retrofit.Builder().baseUrl(base).client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build()
     }
 
     @Provides @Singleton
