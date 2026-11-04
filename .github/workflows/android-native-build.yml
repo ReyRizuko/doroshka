@@ -1,0 +1,37 @@
+name: Native Android build
+
+on:
+  push:
+    branches:
+      - feat/catalog-independent-media-core
+  pull_request:
+    branches:
+      - feat/multisource-ui
+      - main
+    paths:
+      - "native-android/**"
+      - ".github/workflows/android-native-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  assemble-debug:
+    name: Assemble Android debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        working-directory: native-android
+        run: ./gradlew --no-daemon :app:assembleDebug
