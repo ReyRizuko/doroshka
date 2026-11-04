@@ -20,6 +20,19 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): TrackEntity?
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCatalogRows(tracks: List<TrackEntity>)
+
+    @Query("""
+        UPDATE tracks SET title = :title, artist = :artist, audioUrl = :audioUrl,
+            imageUrl = :imageUrl, durationMs = :durationMs, cachedAt = :cachedAt
+        WHERE id = :id
+    """)
+    suspend fun updateCatalogMetadata(
+        id: String, title: String, artist: String, audioUrl: String,
+        imageUrl: String?, durationMs: Long, cachedAt: Long
+    )
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(tracks: List<TrackEntity>)
 
