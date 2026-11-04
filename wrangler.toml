@@ -6,7 +6,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "doroshka-music"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "d60d941a-e9c0-4970-abda-5b770fa49be1"
 migrations_dir = "cloudflare/migrations"
 
 [vars]
