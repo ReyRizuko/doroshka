@@ -21,23 +21,11 @@ import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
 object CoreNetworkModule {
-    @Provides @Singleton
-    fun provideJson(): Json = Json { ignoreUnknownKeys = true; explicitNulls = false }
-
-    @Provides @Singleton
-    fun provideHttpClient(): OkHttpClient =
-        OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BASIC
-            })
-            .build()
-
     @Provides @Singleton
     fun provideCoreStreamApi(client: OkHttpClient, json: Json): CoreStreamApi {
         val contentType = "application/json".toMediaType()
