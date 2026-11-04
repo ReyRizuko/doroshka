@@ -5,6 +5,7 @@ on:
     branches: [main, master, 'feat/**']
   pull_request:
     branches: [main, master]
+
 jobs:
   backend-check:
     runs-on: ubuntu-latest
@@ -15,31 +16,22 @@ jobs:
           python-version: '3.12'
       - name: Install API dependencies
         run: pip install -r music-server/requirements.txt
-      - name: Check backend syntax
+      - name: Check API syntax
         run: python -m py_compile music-server/app.py
-  apk:
+
+  native-android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-      - run: npm install
-      - run: npm run prepare-assets
-      - name: Check application JavaScript and provider panels
-        run: node scripts/check-inline-js.js
-      - run: npx cap add android
-      - run: npx cap sync android
-      - name: Configure native playback and Spotify deep link
-        run: python3 native-setup.py
-      - name: Build
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+          java-version: '17'
+          cache: gradle
+      - name: Build native Kotlin application
+        working-directory: native-android
+        run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: dorozhka-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: doroshka-native-apk
+          path: native-android/app/build/outputs/apk/debug/app-debug.apk
