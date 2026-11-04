@@ -278,7 +278,16 @@ private fun PlayerScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, onB
     val playback = state.playback
     val track = playback.currentTrack
     if (track == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Выбери трек в каталоге") }
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Сейчас ничего не играет", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(20.dp))
+            Button(onClick = onHome) { Text("На главную") }
+            TextButton(onClick = onBack) { Text("Назад") }
+        }
         return
     }
     val duration = max(playback.durationMs, track.durationMs).coerceAtLeast(1L)
