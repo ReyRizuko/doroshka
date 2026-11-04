@@ -57,6 +57,15 @@ async function route(request, env) {
     ]);
     return response(request, env, JSON.stringify({ items: (items.results || []).map(publicTrack), total: total.total, limit, offset }), 200, JSON_HEADERS);
   }
+  const streamInfoMatch = path.match(/^\\/api\\/v1\\/tracks\\/([a-f0-9-]+)\\/stream-info$/i);
+  if (request.method === "GET" && streamInfoMatch) {
+    const row = await env.DB.prepare("SELECT id FROM tracks WHERE id=?").bind(streamInfoMatch[1]).first();
+    if (!row) return response(request, env, JSON.stringify({ error: "Track not found" }), 404, JSON_HEADERS);
+    return response(request, env, JSON.stringify({
+      url: new URL("/api/v1/tracks/" + encodeURIComponent(row.id) + "/stream", url.origin).toString(),
+      downloadAllowed: false
+    }), 200, JSON_HEADERS);
+  }
   const streamMatch = path.match(/^\/api\/v1\/tracks\/([a-f0-9-]+)\/stream$/i);
   if (request.method === "GET" && streamMatch) {
     const row = await env.DB.prepare("SELECT object_key,mime_type FROM tracks WHERE id=?").bind(streamMatch[1]).first();
