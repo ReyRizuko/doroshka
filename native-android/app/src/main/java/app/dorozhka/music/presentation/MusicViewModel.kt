@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -91,10 +93,21 @@ class MusicViewModel @Inject constructor(
             query.debounce(350).distinctUntilChanged().collect { term ->
                 if (term.isBlank()) {
                     results.value = emptyList()
-                } else {
-                    loading.value = true
+                    loading.value = false
                     error.value = null
-                    searchTracks(term).catch { error.value = it.message }.collect { results.value = it; loading.value = false }
+                } else {
+                    searchTracks(term)
+                        .onStart {
+                            loading.value = true
+                            error.value = null
+                        }
+                        .catch {
+                            results.value = emptyList()
+                            error.value = it.message?.takeIf(String::isNotBlank)
+                                ?: "Не удалось подключиться к каталогу. Проверь адрес сервера."
+                        }
+                        .onCompletion { loading.value = false }
+                        .collect { results.value = it }
                 }
             }
         }
@@ -102,7 +115,11 @@ class MusicViewModel @Inject constructor(
 
     fun onEvent(event: MusicEvent) {
         when (event) {
-            is MusicEvent.Search -> query.value = event.query
+            is MusicEvent.Search -> {
+                query.value = event.query
+                results.value = emptyList()
+                error.value = null
+            }
             is MusicEvent.PlayTrack -> player.playQueue(event.source, event.source.indexOfFirst { it.id == event.track.id }.coerceAtLeast(0))
             is MusicEvent.SeekTo -> player.seekTo(event.positionMs)
             is MusicEvent.ToggleLike -> viewModelScope.launch { toggleLike(event.trackId) }
