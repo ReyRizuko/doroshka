@@ -44,7 +44,7 @@ class RoomBackedCatalogProvider @Inject constructor(
                             artist = dto.artist,
                             audioUrl = source,
                             imageUrl = dto.imageUrl,
-                            durationMs = dto.durationMs,
+                            durationMs = (dto.durationSeconds * 1000.0).toLong(),
                             cachedAt = System.currentTimeMillis()
                         )
                     }
@@ -67,7 +67,7 @@ class RoomBackedCatalogProvider @Inject constructor(
                                 artist = dto.artist,
                                 audioUrl = source,
                                 imageUrl = dto.imageUrl,
-                                durationMs = dto.durationMs
+                                durationMs = (dto.durationSeconds * 1000.0).toLong()
                             )
                         )
                     )
@@ -77,7 +77,7 @@ class RoomBackedCatalogProvider @Inject constructor(
                         artist = dto.artist,
                         audioUrl = source,
                         imageUrl = dto.imageUrl,
-                        durationMs = dto.durationMs,
+                        durationMs = (dto.durationSeconds * 1000.0).toLong(),
                         cachedAt = System.currentTimeMillis()
                     )
                 }
