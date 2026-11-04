@@ -9,6 +9,8 @@ import app.dorozhka.music.core.domain.AudioSourceProvider
 import app.dorozhka.music.core.domain.CatalogProvider
 import app.dorozhka.music.core.domain.DownloadPermissionProvider
 import app.dorozhka.music.core.domain.TrackDownloadScheduler
+import app.dorozhka.music.core.domain.TrackLikeRepository
+import app.dorozhka.music.core.data.RoomTrackLikeRepository
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Binds
 import dagger.Module
@@ -51,6 +53,9 @@ object CoreNetworkModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class CoreProviderBindings {
+    @Binds @Singleton
+    abstract fun bindTrackLikeRepository(implementation: RoomTrackLikeRepository): TrackLikeRepository
+
     @Binds @Singleton
     abstract fun bindCatalogProvider(implementation: RoomBackedCatalogProvider): CatalogProvider
 
