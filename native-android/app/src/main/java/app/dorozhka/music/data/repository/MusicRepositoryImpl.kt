@@ -9,45 +9,58 @@ import app.dorozhka.music.domain.repository.MusicRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class MusicRepositoryImpl @Inject constructor(
     private val dao: TrackDao,
-    private val api: MusicApiService
+    private val api: MusicApiService,
+    @Named("musicBaseUrl") private val baseUrl: String
 ) : MusicRepository {
 
     override fun observeTrending(forceRefresh: Boolean): Flow<List<Track>> = flow {
-        val cached = dao.observeAll()
-        if (forceRefresh || dao.getById("__catalog_seed__") == null) {
+        val cached = dao.observeAll().first()
+        emit(cached.map(TrackEntity::toDomain))
+        if (forceRefresh || cached.isEmpty()) {
             runCatching {
-                val remote = api.getTrending().items.map { it.toDomain() }
-                if (remote.isNotEmpty()) dao.upsertAll(remote.map(TrackEntity::fromDomain))
+                val remote = api.getTrending().items.map { it.toDomain(baseUrl) }
+                if (remote.isNotEmpty()) {
+                    val merged = remote.map { track ->
+                        val liked = dao.getById(track.id)?.isLiked ?: false
+                        TrackEntity.fromDomain(track.copy(isLiked = liked))
+                    }
+                    dao.upsertAll(merged)
+                }
             }
         }
-        emitAll(cached.map { rows -> rows.map(TrackEntity::toDomain) })
+        emitAll(dao.observeAll().map { rows -> rows.map(TrackEntity::toDomain) })
     }.flowOn(Dispatchers.IO)
 
     override fun searchTracks(query: String): Flow<List<Track>> = flow {
         val term = query.trim()
         if (term.isEmpty()) {
             emitAll(dao.observeAll().map { rows -> rows.map(TrackEntity::toDomain) })
-        } else {
-            emitAll(dao.searchLocal(term).map { rows -> rows.map(TrackEntity::toDomain) })
-            // Search network is executed separately by searchRemote() to keep this stream cancellable.
+            return@flow
         }
+        emit(dao.searchLocal(term).first().map(TrackEntity::toDomain))
+        runCatching {
+            val remote = api.searchTracks(term).items.map { it.toDomain(baseUrl) }
+            if (remote.isNotEmpty()) {
+                dao.upsertAll(remote.map { track ->
+                    val liked = dao.getById(track.id)?.isLiked ?: false
+                    TrackEntity.fromDomain(track.copy(isLiked = liked))
+                })
+            }
+        }
+        emitAll(dao.searchLocal(term).map { rows -> rows.map(TrackEntity::toDomain) })
     }.flowOn(Dispatchers.IO)
-
-    suspend fun refreshSearch(query: String): List<Track> = withContext(Dispatchers.IO) {
-        val remote = api.searchTracks(query).items.map { it.toDomain() }
-        if (remote.isNotEmpty()) dao.upsertAll(remote.map(TrackEntity::fromDomain))
-        remote
-    }
 
     override fun observeLiked(): Flow<List<Track>> =
         dao.observeLiked().map { rows -> rows.map(TrackEntity::toDomain) }
@@ -57,7 +70,8 @@ class MusicRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTrack(trackId: String): Track? = withContext(Dispatchers.IO) {
-        dao.getById(trackId)?.toDomain() ?: runCatching { api.getTrackDetails(trackId).toDomain() }
-            .getOrNull()?.also { dao.upsert(TrackEntity.fromDomain(it)) }
+        dao.getById(trackId)?.toDomain() ?: runCatching {
+            api.getTrackDetails(trackId).toDomain(baseUrl)
+        }.getOrNull()?.also { dao.upsert(TrackEntity.fromDomain(it)) }
     }
 }
