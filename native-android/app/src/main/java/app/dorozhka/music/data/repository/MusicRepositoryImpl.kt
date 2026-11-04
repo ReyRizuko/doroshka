@@ -29,20 +29,18 @@ class MusicRepositoryImpl @Inject constructor(
         val cached = dao.observeAll().first()
         emit(cached.map(TrackEntity::toDomain))
         if (forceRefresh || cached.isEmpty()) {
-            runCatching {
-                val remote = api.getTrending().items.map { it.toDomain(baseUrl) }
-                if (remote.isNotEmpty()) {
-                    val merged = remote.map { track ->
-                        val existing = dao.getById(track.id)
-                        TrackEntity.fromDomain(
-                            track.copy(
-                                isLiked = existing?.isLiked ?: false,
-                                localCachePath = existing?.localCachePath
-                            )
+            val remote = api.getTrending().items.map { it.toDomain(baseUrl) }
+            if (remote.isNotEmpty()) {
+                val merged = remote.map { track ->
+                    val existing = dao.getById(track.id)
+                    TrackEntity.fromDomain(
+                        track.copy(
+                            isLiked = existing?.isLiked ?: false,
+                            localCachePath = existing?.localCachePath
                         )
-                    }
-                    dao.upsertAll(merged)
+                    )
                 }
+                dao.upsertAll(merged)
             }
         }
         emitAll(dao.observeAll().map { rows -> rows.map(TrackEntity::toDomain) })
@@ -55,19 +53,17 @@ class MusicRepositoryImpl @Inject constructor(
             return@flow
         }
         emit(dao.searchLocal(term).first().map(TrackEntity::toDomain))
-        runCatching {
-            val remote = api.searchTracks(term).items.map { it.toDomain(baseUrl) }
-            if (remote.isNotEmpty()) {
-                dao.upsertAll(remote.map { track ->
-                    val existing = dao.getById(track.id)
-                    TrackEntity.fromDomain(
-                        track.copy(
-                            isLiked = existing?.isLiked ?: false,
-                            localCachePath = existing?.localCachePath
-                        )
+        val remote = api.searchTracks(term).items.map { it.toDomain(baseUrl) }
+        if (remote.isNotEmpty()) {
+            dao.upsertAll(remote.map { track ->
+                val existing = dao.getById(track.id)
+                TrackEntity.fromDomain(
+                    track.copy(
+                        isLiked = existing?.isLiked ?: false,
+                        localCachePath = existing?.localCachePath
                     )
-                })
-            }
+                )
+            })
         }
         emitAll(dao.searchLocal(term).map { rows -> rows.map(TrackEntity::toDomain) })
     }.flowOn(Dispatchers.IO)
