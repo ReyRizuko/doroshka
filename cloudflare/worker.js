@@ -68,8 +68,35 @@ async function route(request, env) {
   }
   const streamMatch = path.match(/^\/api\/v1\/tracks\/([a-f0-9-]+)\/stream$/i);
   if (request.method === "GET" && streamMatch) {
-    const row = await env.DB.prepare("SELECT object_key,mime_type FROM tracks WHERE id=?").bind(streamMatch[1]).first();
+    const row = await env.DB.prepare("SELECT object_key,source_url,mime_type FROM tracks WHERE id=?").bind(streamMatch[1]).first();
     if (!row) return response(request, env, JSON.stringify({ error: "Track not found" }), 404, JSON_HEADERS);
+
+    if (row.source_url) {
+      const source = new URL(row.source_url);
+      const allowedHosts = (env.AUDIO_SOURCE_HOSTS || "upload.wikimedia.org").split(",").map(x => x.trim()).filter(Boolean);
+      if (source.protocol !== "https:" || !allowedHosts.includes(source.hostname)) {
+        return response(request, env, JSON.stringify({ error: "Audio source host is not allowed" }), 403, JSON_HEADERS);
+      }
+      const upstreamHeaders = new Headers();
+      const range = request.headers.get("Range");
+      if (range) upstreamHeaders.set("Range", range);
+      const upstream = await fetch(source.toString(), { headers: upstreamHeaders, redirect: "manual" });
+      if (upstream.status !== 200 && upstream.status !== 206) {
+        return response(request, env, JSON.stringify({ error: "Upstream audio source unavailable" }), 502, JSON_HEADERS);
+      }
+      const headers = {
+        "Content-Type": row.mime_type || upstream.headers.get("Content-Type") || "application/octet-stream",
+        "Accept-Ranges": upstream.headers.get("Accept-Ranges") || "bytes",
+        "Cache-Control": "public, max-age=3600"
+      };
+      for (const name of ["Content-Length", "Content-Range"]) {
+        const value = upstream.headers.get(name);
+        if (value) headers[name] = value;
+      }
+      return response(request, env, upstream.body, upstream.status, headers);
+    }
+
+    if (!env.AUDIO) return response(request, env, JSON.stringify({ error: "Track has no remote source and R2 is not configured" }), 503, JSON_HEADERS);
     const head = await env.AUDIO.head(row.object_key);
     if (!head) return response(request, env, JSON.stringify({ error: "Audio file is missing" }), 404, JSON_HEADERS);
     const size = head.size;
@@ -102,8 +129,36 @@ async function route(request, env) {
     const row = await env.DB.prepare("SELECT id,title,artist,album,genre,duration,cover_url,license,attribution,created_at FROM tracks WHERE id=?").bind(trackMatch[1]).first();
     return row ? response(request, env, JSON.stringify(publicTrack(row)), 200, JSON_HEADERS) : response(request, env, JSON.stringify({ error: "Track not found" }), 404, JSON_HEADERS);
   }
+  if (request.method === "POST" && path === "/api/v1/admin/tracks/link") {
+    if (!admin(request, env)) return response(request, env, JSON.stringify({ error: "Unauthorized" }), env.ADMIN_TOKEN ? 401 : 503, JSON_HEADERS);
+    let input;
+    try { input = await request.json(); } catch { return response(request, env, JSON.stringify({ error: "Invalid JSON body" }), 400, JSON_HEADERS); }
+    const title = String(input.title || "").trim();
+    const license = String(input.license || "").trim();
+    const sourceUrl = String(input.source_url || "").trim();
+    if (!title || !license || !sourceUrl) return response(request, env, JSON.stringify({ error: "title, license and source_url are required" }), 400, JSON_HEADERS);
+    let source;
+    try { source = new URL(sourceUrl); } catch { return response(request, env, JSON.stringify({ error: "Invalid source_url" }), 400, JSON_HEADERS); }
+    const allowedHosts = (env.AUDIO_SOURCE_HOSTS || "upload.wikimedia.org").split(",").map(x => x.trim()).filter(Boolean);
+    if (source.protocol !== "https:" || !allowedHosts.includes(source.hostname)) {
+      return response(request, env, JSON.stringify({ error: "Audio source host is not allowed" }), 400, JSON_HEADERS);
+    }
+    const mime = String(input.mime_type || "audio/ogg").toLowerCase();
+    if (!mime.startsWith("audio/")) return response(request, env, JSON.stringify({ error: "mime_type must be an audio type" }), 415, JSON_HEADERS);
+    const id = crypto.randomUUID();
+    const artist = String(input.artist || "");
+    const album = String(input.album || "");
+    const genre = String(input.genre || "");
+    const duration = Math.max(0, Number(input.duration) || 0);
+    const cover = String(input.cover_url || "");
+    const attribution = String(input.attribution || "");
+    await env.DB.prepare("INSERT INTO tracks (id,title,artist,album,genre,duration,object_key,source_url,mime_type,cover_url,license,attribution) VALUES (?,?,?,?,?,?,NULL,?,?,?,?,?)")
+      .bind(id,title,artist,album,genre,duration,source.toString(),mime,cover,license,attribution).run();
+    return response(request, env, JSON.stringify({ id, title, artist, album, genre, duration, cover_url: cover, license, attribution, stream_url: "/api/v1/tracks/" + id + "/stream" }), 201, JSON_HEADERS);
+  }
   if (request.method === "POST" && path === "/api/v1/admin/tracks") {
     if (!admin(request, env)) return response(request, env, JSON.stringify({ error: "Unauthorized" }), env.ADMIN_TOKEN ? 401 : 503, JSON_HEADERS);
+    if (!env.AUDIO) return response(request, env, JSON.stringify({ error: "R2 upload is not configured; use /api/v1/admin/tracks/link" }), 503, JSON_HEADERS);
     const title = (url.searchParams.get("title") || "").trim();
     const license = (url.searchParams.get("license") || "").trim();
     if (!title || !license || !request.body) return response(request, env, JSON.stringify({ error: "title, license and raw audio body are required" }), 400, JSON_HEADERS);
