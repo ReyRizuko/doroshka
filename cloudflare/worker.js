@@ -80,7 +80,11 @@ async function route(request, env) {
       const upstreamHeaders = new Headers();
       const range = request.headers.get("Range");
       if (range) upstreamHeaders.set("Range", range);
-      const upstream = await fetch(source.toString(), { headers: upstreamHeaders, redirect: "manual" });
+      const upstream = await fetch(source.toString(), { headers: upstreamHeaders, redirect: "follow" });
+      const finalSource = new URL(upstream.url || source.toString());
+      if (finalSource.protocol !== "https:" || !allowedHosts.includes(finalSource.hostname)) {
+        return response(request, env, JSON.stringify({ error: "Audio redirect host is not allowed" }), 502, JSON_HEADERS);
+      }
       if (upstream.status !== 200 && upstream.status !== 206) {
         return response(request, env, JSON.stringify({ error: "Upstream audio source unavailable" }), 502, JSON_HEADERS);
       }
