@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -48,7 +50,7 @@ sealed interface MusicEvent {
     data object Refresh : MusicEvent
 }
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MusicViewModel @Inject constructor(
     private val getTrending: GetTrendingTracksUseCase,
@@ -90,25 +92,29 @@ class MusicViewModel @Inject constructor(
             repository.observeLiked().collect { liked.value = it }
         }
         viewModelScope.launch {
-            query.debounce(350).distinctUntilChanged().collect { term ->
-                if (term.isBlank()) {
-                    results.value = emptyList()
-                    loading.value = false
-                    error.value = null
-                } else {
-                    searchTracks(term)
-                        .onStart {
-                            loading.value = true
-                            error.value = null
-                        }
-                        .catch {
-                            error.value = it.message?.takeIf(String::isNotBlank)
-                                ?: "Не удалось подключиться к каталогу. Проверь адрес сервера."
-                        }
-                        .onCompletion { loading.value = false }
-                        .collect { results.value = it }
+            query
+                .debounce(350)
+                .distinctUntilChanged()
+                .flatMapLatest { term ->
+                    if (term.isBlank()) {
+                        loading.value = false
+                        error.value = null
+                        flowOf(emptyList())
+                    } else {
+                        searchTracks(term)
+                            .onStart {
+                                loading.value = true
+                                error.value = null
+                            }
+                            .catch {
+                                error.value = it.message?.takeIf(String::isNotBlank)
+                                    ?: "Не удалось подключиться к каталогу. Проверь адрес сервера."
+                                emit(emptyList())
+                            }
+                            .onCompletion { loading.value = false }
+                    }
                 }
-            }
+                .collect { results.value = it }
         }
     }
 
