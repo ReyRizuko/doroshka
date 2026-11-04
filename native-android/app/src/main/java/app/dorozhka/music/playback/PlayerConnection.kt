@@ -39,6 +39,8 @@ class PlayerConnection @Inject constructor(
 ) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
+    private val _progress = MutableStateFlow(0L)
+    val progress: StateFlow<Long> = _progress.asStateFlow()
     private var controller: MediaController? = null
     private var pendingQueue: Pair<List<Track>, Int>? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -63,7 +65,15 @@ class PlayerConnection @Inject constructor(
             }
         }, Executor { it.run() })
         scope.launch {
-            while (isActive) { publish(); delay(500) }
+            while (isActive) {
+                val activePlayer = controller
+                if (activePlayer != null) {
+                    _progress.value = activePlayer.currentPosition.coerceAtLeast(0L)
+                    delay(if (activePlayer.isPlaying) 250L else 500L)
+                } else {
+                    delay(500L)
+                }
+            }
         }
     }
 
@@ -80,6 +90,7 @@ class PlayerConnection @Inject constructor(
                 durationMs = p.duration.coerceAtLeast(0)
             )
         }
+        _progress.value = p.currentPosition.coerceAtLeast(0L)
         _state.update {
             it.copy(
                 currentTrack = track,
