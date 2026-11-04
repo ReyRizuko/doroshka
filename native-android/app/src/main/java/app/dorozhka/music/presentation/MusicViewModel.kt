@@ -65,11 +65,14 @@ class MusicViewModel @Inject constructor(
     val uiState: StateFlow<MusicUiState> = combine(
         trending, results, liked, player.state, query, loading, error
     ) { values ->
+        val likedTracks = values[2] as List<Track>
+        val playback = values[3] as PlaybackUiState
+        val current = playback.currentTrack?.let { it.copy(isLiked = likedTracks.any { liked -> liked.id == it.id }) }
         MusicUiState(
             trending = values[0] as List<Track>,
             searchResults = values[1] as List<Track>,
-            likedTracks = values[2] as List<Track>,
-            playback = values[3] as PlaybackUiState,
+            likedTracks = likedTracks,
+            playback = playback.copy(currentTrack = current),
             query = values[4] as String,
             isLoading = values[5] as Boolean,
             error = values[6] as String?
