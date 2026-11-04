@@ -17,7 +17,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        buildConfigField("String", "MUSIC_API_BASE_URL", "\"\u0024{providers.gradleProperty("MUSIC_API_BASE_URL").orElse("https://doroshka-music-api.workers.dev/").get()}\"")
+        val musicApiBaseUrl = providers.gradleProperty("MUSIC_API_BASE_URL").orElse("https://doroshka-music-api.workers.dev/").get()
+        buildConfigField("String", "MUSIC_API_BASE_URL", "\"$musicApiBaseUrl\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions {
