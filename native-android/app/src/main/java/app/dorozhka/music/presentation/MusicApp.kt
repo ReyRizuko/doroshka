@@ -297,6 +297,9 @@ private fun PlayerScreen(state: MusicUiState, onEvent: (MusicEvent) -> Unit, onB
             }
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { onEvent(MusicEvent.ToggleLike(track.id)) }) {
+                    Icon(if (track.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder, null, tint = if (track.isLiked) MaterialTheme.colorScheme.primary else Color.Gray)
+                }
                 IconButton(onClick = { onEvent(MusicEvent.Shuffle) }) { Icon(Icons.Filled.Shuffle, null, tint = if (playback.shuffleEnabled) MaterialTheme.colorScheme.primary else Color.Gray) }
                 IconButton(onClick = { onEvent(MusicEvent.Previous) }) { Icon(Icons.Filled.SkipPrevious, null, modifier = Modifier.size(34.dp)) }
                 FilledIconButton(onClick = { onEvent(MusicEvent.TogglePlayPause) }, modifier = Modifier.size(70.dp), shape = CircleShape) {
