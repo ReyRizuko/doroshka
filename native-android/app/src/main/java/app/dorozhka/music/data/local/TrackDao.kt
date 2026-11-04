@@ -29,6 +29,9 @@ interface TrackDao {
     @Query("UPDATE tracks SET isLiked = CASE WHEN isLiked = 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun toggleLike(id: String)
 
+    @Query("UPDATE tracks SET localCachePath = :absolutePath WHERE id = :id")
+    suspend fun updateLocalPath(id: String, absolutePath: String)
+
     @Query("DELETE FROM tracks WHERE id = :id")
     suspend fun delete(id: String)
 
