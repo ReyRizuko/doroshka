@@ -54,10 +54,11 @@ class TrackDownloadWorker @AssistedInject constructor(
                 }
 
                 val destination = File(directory, safeId + ".media")
-                temporaryFile = File(directory, UUID.randomUUID().toString() + ".part")
+                val tempFile = File(directory, UUID.randomUUID().toString() + ".part")
+                temporaryFile = tempFile
 
                 body.byteStream().use { input ->
-                    FileOutputStream(temporaryFile).use { output ->
+                    FileOutputStream(tempFile).use { output ->
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         var totalBytes = 0L
                         while (true) {
@@ -74,11 +75,11 @@ class TrackDownloadWorker @AssistedInject constructor(
                     }
                 }
 
-                if (temporaryFile.length() == 0L) return@withContext Result.failure()
+                if (tempFile.length() == 0L) return@withContext Result.failure()
                 if (destination.exists() && !destination.delete()) {
                     throw IllegalStateException("Cannot replace previous offline file")
                 }
-                if (!temporaryFile.renameTo(destination)) {
+                if (!tempFile.renameTo(destination)) {
                     throw IllegalStateException("Cannot finalize offline file")
                 }
 
