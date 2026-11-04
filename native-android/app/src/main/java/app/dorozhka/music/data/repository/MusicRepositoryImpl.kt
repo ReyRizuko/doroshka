@@ -54,8 +54,13 @@ class MusicRepositoryImpl @Inject constructor(
             val remote = api.searchTracks(term).items.map { it.toDomain(baseUrl) }
             if (remote.isNotEmpty()) {
                 dao.upsertAll(remote.map { track ->
-                    val liked = dao.getById(track.id)?.isLiked ?: false
-                    TrackEntity.fromDomain(track.copy(isLiked = liked))
+                    val existing = dao.getById(track.id)
+                    TrackEntity.fromDomain(
+                        track.copy(
+                            isLiked = existing?.isLiked ?: false,
+                            localCachePath = existing?.localCachePath
+                        )
+                    )
                 })
             }
         }
@@ -72,6 +77,12 @@ class MusicRepositoryImpl @Inject constructor(
     override suspend fun getTrack(trackId: String): Track? = withContext(Dispatchers.IO) {
         dao.getById(trackId)?.toDomain() ?: runCatching {
             api.getTrackDetails(trackId).toDomain(baseUrl)
-        }.getOrNull()?.also { dao.upsert(TrackEntity.fromDomain(it)) }
+        }.getOrNull()?.let { remote ->
+            val existing = dao.getById(trackId)
+            remote.copy(
+                isLiked = existing?.isLiked ?: false,
+                localCachePath = existing?.localCachePath
+            ).also { dao.upsert(TrackEntity.fromDomain(it)) }
+        }
     }
 }
