@@ -70,6 +70,13 @@ fun MusicApp(viewModel: MusicViewModel = hiltViewModel()) {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val onEvent: (MusicEvent) -> Unit = viewModel::onEvent
+    val navigateToTab: (String) -> Unit = { destination ->
+        nav.navigate(destination) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     BackHandler(enabled = route == Destinations.PLAYER) {
         if (!nav.popBackStack()) {
@@ -89,17 +96,17 @@ fun MusicApp(viewModel: MusicViewModel = hiltViewModel()) {
                     NavigationBar(containerColor = Color(0xFF101115), contentColor = Color.White) {
                         NavigationBarItem(
                             selected = route == Destinations.HOME,
-                            onClick = { nav.navigate(Destinations.HOME) { popUpTo(nav.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
+                            onClick = { navigateToTab(Destinations.HOME) },
                             icon = { Icon(Icons.Filled.Home, null) }, label = { Text("Главная") }
                         )
                         NavigationBarItem(
                             selected = route == Destinations.SEARCH,
-                            onClick = { nav.navigate(Destinations.SEARCH) { launchSingleTop = true } },
+                            onClick = { navigateToTab(Destinations.SEARCH) },
                             icon = { Icon(Icons.Filled.Search, null) }, label = { Text("Поиск") }
                         )
                         NavigationBarItem(
                             selected = route == Destinations.LIBRARY,
-                            onClick = { nav.navigate(Destinations.LIBRARY) { launchSingleTop = true } },
+                            onClick = { navigateToTab(Destinations.LIBRARY) },
                             icon = { Icon(Icons.Filled.LibraryMusic, null) }, label = { Text("Медиатека") }
                         )
                     }
