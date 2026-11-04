@@ -1,0 +1,15 @@
+name = "doroshka-music-api"
+main = "cloudflare/worker.js"
+compatibility_date = "2026-10-31"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "doroshka-music"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "cloudflare/migrations"
+
+[vars]
+ALLOWED_ORIGINS = "*"
+AUDIO_SOURCE_HOSTS = "upload.wikimedia.org"
+MAX_UPLOAD_BYTES = "104857600"

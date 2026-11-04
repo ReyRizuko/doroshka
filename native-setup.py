@@ -38,6 +38,8 @@ public class ControlReceiver extends BroadcastReceiver {
 
 FILES['MainActivity.java'] = r'''package app.dorozhka.player;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
@@ -46,6 +48,62 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PlaybackPlugin.class);
         super.onCreate(savedInstanceState);
+        getBridge().getWebView().addJavascriptInterface(new SpotifyOAuthBridge(this), "SpotifyOAuth");
+        captureSpotifyCallback(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        captureSpotifyCallback(intent);
+    }
+
+    private void captureSpotifyCallback(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri uri = intent.getData();
+        if ("doroshka".equals(uri.getScheme()) && "spotify-callback".equals(uri.getHost())) {
+            getSharedPreferences("doroshka_oauth", MODE_PRIVATE).edit()
+                .putString("spotify_callback_url", uri.toString()).apply();
+        }
+    }
+}
+'''
+
+
+
+FILES['SpotifyOAuthBridge.java'] = r'''package app.dorozhka.player;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.webkit.JavascriptInterface;
+
+public class SpotifyOAuthBridge {
+    private final Context context;
+
+    public SpotifyOAuthBridge(Context context) {
+        this.context = context.getApplicationContext();
+    }
+
+    @JavascriptInterface
+    public String getPendingUrl() {
+        return context.getSharedPreferences("doroshka_oauth", Context.MODE_PRIVATE)
+            .getString("spotify_callback_url", "");
+    }
+
+    @JavascriptInterface
+    public void clearPendingUrl() {
+        context.getSharedPreferences("doroshka_oauth", Context.MODE_PRIVATE).edit()
+            .remove("spotify_callback_url").apply();
+    }
+
+    @JavascriptInterface
+    public void openAuthUrl(String value) {
+        if (value == null || !value.startsWith("https://accounts.spotify.com/authorize")) return;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(value));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
     }
 }
 '''
@@ -61,6 +119,8 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
+import android.os.SystemClock;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -70,6 +130,9 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import org.json.JSONArray;
 
 @CapacitorPlugin(name = "Playback")
 public class PlaybackPlugin extends Plugin {
@@ -85,6 +148,12 @@ public class PlaybackPlugin extends Plugin {
         instance = this;
     }
 
+    @Override
+    protected void handleOnDestroy() {
+        if (instance == this) instance = null;
+        super.handleOnDestroy();
+    }
+
     static void emit(String event, JSObject data) {
         PlaybackPlugin p = instance;
         if (p != null) p.notifyListeners(event, data);
@@ -92,37 +161,74 @@ public class PlaybackPlugin extends Plugin {
 
     private void askNotifications() {
         if (asked || Build.VERSION.SDK_INT < 33) return;
-        asked = true;
         final String perm = "android.permission.POST_NOTIFICATIONS";
         try {
             final Activity a = getActivity();
-            if (a != null && getContext().checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
-                a.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
+            if (a == null) return;
+            if (a.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) {
+                asked = true;
+                return;
+            }
+            a.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (Build.VERSION.SDK_INT >= 33
+                            && a.checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+                        asked = true;
                         a.requestPermissions(new String[]{perm}, 4242);
                     }
-                });
-            }
+                }
+            });
         } catch (Exception ignored) {
         }
     }
 
     private void run(PluginCall call, final Cmd cmd) {
-        PlaybackService.post(new Runnable() {
+        boolean accepted = PlaybackService.post(new Runnable() {
             @Override
             public void run() {
                 PlaybackService s = PlaybackService.instance;
                 if (s != null) cmd.run(s);
             }
         });
+        if (accepted) call.resolve();
+        else call.reject("Android-плеер ещё не запущен");
+    }
+
+    @PluginMethod
+    public void getNotificationStatus(PluginCall call) {
+        boolean granted = Build.VERSION.SDK_INT < 33
+                || getContext().checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+        JSObject result = new JSObject();
+        result.put("granted", granted);
+        result.put("supported", Build.VERSION.SDK_INT >= 33);
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void requestNotifications(PluginCall call) {
+        askNotifications();
         call.resolve();
+    }
+
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Не удалось открыть настройки уведомлений", e);
+        }
     }
 
     @PluginMethod
     public void setQueue(PluginCall call) {
         askNotifications();
         PlaybackService.repeat = call.getInt("repeat", 0);
+        PlaybackService.prepareStart();
         Intent i = new Intent(getContext(), PlaybackService.class);
         i.setAction(PlaybackService.ACTION_CMD);
         i.putExtra("cmd", "queue");
@@ -132,6 +238,7 @@ public class PlaybackPlugin extends Plugin {
             else getContext().startService(i);
             call.resolve();
         } catch (Exception e) {
+            PlaybackService.cancelStart();
             call.reject(String.valueOf(e.getMessage()));
         }
     }
@@ -178,6 +285,21 @@ public class PlaybackPlugin extends Plugin {
         final float v = d == null ? 1f : Math.max(0f, Math.min(1f, d.floatValue()));
         PlaybackService.volume = v;
         run(call, new Cmd() { public void run(PlaybackService s) { s.applyVolume(); } });
+    }
+
+    @PluginMethod
+    public void setEqualizer(PluginCall call) {
+        final boolean enabled = call.getBoolean("enabled", true);
+        final JSONArray bands = call.getData().optJSONArray("bands");
+        PlaybackService.configureEqualizer(enabled, bands);
+        run(call, new Cmd() { public void run(PlaybackService s) { s.setEqualizer(enabled, bands); } });
+    }
+
+    @PluginMethod
+    public void setArtwork(PluginCall call) {
+        final String id = call.getString("id", "");
+        final String art = call.getString("art", "");
+        run(call, new Cmd() { public void run(PlaybackService s) { s.setArtwork(id, art); } });
     }
 
     @PluginMethod
@@ -281,11 +403,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Icon;
+import android.util.Base64;
 import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
+import android.media.audiofx.Equalizer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.net.Uri;
@@ -295,14 +422,20 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import com.getcapacitor.JSObject;
 import java.util.ArrayList;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Нативный плеер: очередь, воспроизведение и уведомление живут здесь, а не в WebView. */
 public class PlaybackService extends Service implements AudioManager.OnAudioFocusChangeListener {
     static PlaybackService instance;
+    private static final Object POST_LOCK = new Object();
+    private static final ArrayList<Runnable> pendingCommands = new ArrayList<>();
+    private static boolean startingService = false;
     static final String ACTION_CMD = "app.dorozhka.player.CMD";
     static volatile float volume = 1f;
     static volatile int repeat = 0; // 0 выкл, 1 все, 2 один
@@ -311,19 +444,26 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     private static final int NOTIFICATION_ID = 7;
 
     private static class Item {
-        String id = "", url = "", title = "", artist = "", album = "";
+        String id = "", url = "", title = "", artist = "", album = "", art = "";
     }
 
     private final ArrayList<Item> queue = new ArrayList<>();
     private int index = -1;
     private MediaPlayer mp;
+    private Equalizer equalizer;
+    private Bitmap remoteArtwork;
+    private String remoteArtworkId = "";
+    static volatile boolean equalizerEnabled = true;
+    static volatile short[] equalizerBands = new short[]{0, 0, 0, 0, 0};
     private boolean prepared = false;
     private boolean wantPlay = false;
+    private boolean completed = false;
     private boolean pausedByFocus = false;
     private boolean foreground = false;
     private int errRun = 0;
     private MediaSession session;
     private AudioManager audio;
+    private AudioFocusRequest focusRequest;
     private WifiManager.WifiLock wifiLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -338,13 +478,34 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         @Override
         public void run() {
             emitState();
+            updatePlaybackState();
             if (isPlaying()) handler.postDelayed(this, 500);
         }
     };
 
-    static void post(Runnable r) {
-        PlaybackService s = instance;
-        if (s != null) s.handler.post(r);
+    static void prepareStart() {
+        synchronized (POST_LOCK) {
+            if (instance == null) startingService = true;
+        }
+    }
+
+    static void cancelStart() {
+        synchronized (POST_LOCK) {
+            startingService = false;
+            pendingCommands.clear();
+        }
+    }
+
+    static boolean post(Runnable r) {
+        synchronized (POST_LOCK) {
+            PlaybackService s = instance;
+            if (s != null) return s.handler.post(r);
+            if (startingService) {
+                pendingCommands.add(r);
+                return true;
+            }
+            return false;
+        }
     }
 
     @Override
@@ -355,7 +516,12 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
+        synchronized (POST_LOCK) {
+            instance = this;
+            startingService = false;
+            for (Runnable command : pendingCommands) handler.post(command);
+            pendingCommands.clear();
+        }
         audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         session = new MediaSession(this, "Dorozhka");
         session.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
@@ -407,6 +573,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         try {
             goForeground();
         } catch (Exception e) {
+            emitError("");
+            PlaybackPlugin.emit("stopped", new JSObject());
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -437,6 +605,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 it.title = j.optString("title", "");
                 it.artist = j.optString("artist", "");
                 it.album = j.optString("album", "");
+                it.art = j.optString("art", "");
                 if (!it.url.isEmpty()) list.add(it);
             }
         }
@@ -458,6 +627,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         }
         errRun = 0;
         startIndex(idx, true);
+        loadRemoteArtwork(current());
     }
 
     private Item current() {
@@ -466,6 +636,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private void releasePlayer() {
         handler.removeCallbacks(ticker);
+        if (equalizer != null) {
+            try { equalizer.setEnabled(false); equalizer.release(); } catch (Exception ignored) {}
+            equalizer = null;
+        }
         if (mp != null) {
             try {
                 mp.setOnPreparedListener(null);
@@ -484,6 +658,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (i < 0 || i >= queue.size()) return;
         index = i;
         wantPlay = play;
+        completed = false;
         pausedByFocus = false;
         releasePlayer();
         final MediaPlayer p = new MediaPlayer();
@@ -500,6 +675,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 prepared = true;
                 errRun = 0;
                 m.setVolume(volume, volume);
+                attachEqualizer(m.getAudioSessionId());
                 if (wantPlay) startPlayback();
                 updateSession();
                 updateNotification();
@@ -513,6 +689,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        // Событие старого MediaPlayer могло попасть в очередь main thread
+                        // до переключения трека. Не даём ему пропустить новый трек.
+                        if (m != mp) return;
                         onTrackEnd();
                     }
                 });
@@ -525,6 +704,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        // Не обрабатываем запоздавшую ошибку уже заменённого плеера.
+                        if (m != mp) return;
                         onTrackError();
                     }
                 });
@@ -538,6 +719,7 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             handler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (p != mp) return;
                     onTrackError();
                 }
             });
@@ -559,10 +741,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (repeat == 2) {
             try {
                 mp.seekTo(0);
-                mp.start();
-                handler.removeCallbacks(ticker);
-                handler.post(ticker);
-            } catch (Exception ignored) {
+                startPlayback();
+            } catch (Exception e) {
+                onTrackError();
             }
             return;
         }
@@ -572,7 +753,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             startIndex(0, true);
         } else {
             wantPlay = false;
+            completed = true;
             handler.removeCallbacks(ticker);
+            releaseWifiLock();
+            abandonFocus();
             updateSession();
             updateNotification();
             emitState();
@@ -589,8 +773,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
             startIndex(n, true);
         } else {
             wantPlay = false;
-            prepared = false;
             handler.removeCallbacks(ticker);
+            releasePlayer();
+            releaseWifiLock();
+            abandonFocus();
             updateSession();
             updateNotification();
             emitState();
@@ -608,10 +794,25 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     private boolean requestFocus() {
         try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                if (focusRequest == null) {
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build();
+                    focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                            .setAudioAttributes(attributes)
+                            .setAcceptsDelayedFocusGain(false)
+                            .setWillPauseWhenDucked(true)
+                            .setOnAudioFocusChangeListener(this, handler)
+                            .build();
+                }
+                return audio.requestAudioFocus(focusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+            }
             return audio.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
                     == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         } catch (Exception e) {
-            return true;
+            return false;
         }
     }
 
@@ -619,15 +820,38 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (mp == null || !prepared) return;
         if (!requestFocus()) {
             wantPlay = false;
+            handler.removeCallbacks(ticker);
+            releaseWifiLock();
+            updateSession();
+            updateNotification();
+            emitState();
             return;
         }
         try {
             mp.start();
         } catch (Exception e) {
+            onTrackError();
             return;
         }
         handler.removeCallbacks(ticker);
         handler.post(ticker);
+    }
+
+    private void releaseWifiLock() {
+        try {
+            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void abandonFocus() {
+        try {
+            if (audio != null) {
+                if (Build.VERSION.SDK_INT >= 26 && focusRequest != null) audio.abandonAudioFocusRequest(focusRequest);
+                else audio.abandonAudioFocus(this);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     void pause(boolean byFocus) {
@@ -638,6 +862,10 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } catch (Exception ignored) {
         }
         handler.removeCallbacks(ticker);
+        releaseWifiLock();
+        // При временной потере фокуса не отказываемся от него:
+        // система должна прислать AUDIOFOCUS_GAIN для автоматического продолжения.
+        if (!byFocus) abandonFocus();
         updateSession();
         updateNotification();
         emitState();
@@ -647,8 +875,12 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         if (queue.isEmpty()) return;
         wantPlay = true;
         pausedByFocus = false;
-        if (mp != null && prepared) startPlayback();
-        else if (mp == null && index >= 0) startIndex(index, true);
+        if (mp != null && prepared) {
+            if (completed) {
+                try { mp.seekTo(0); completed = false; } catch (Exception e) { onTrackError(); return; }
+            }
+            startPlayback();
+        } else if (mp == null && index >= 0) startIndex(index, true);
         updateSession();
         updateNotification();
         emitState();
@@ -692,6 +924,61 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         emitState();
     }
 
+    void setArtwork(String id, String art) {
+        for (Item item : queue) {
+            if (item.id.equals(id)) {
+                item.art = art == null ? "" : art;
+                if (item == current()) {
+                    loadRemoteArtwork(item);
+                    updateSession();
+                    updateNotification();
+                }
+                return;
+            }
+        }
+    }
+
+    static void configureEqualizer(boolean enabled, JSONArray bands) {
+        equalizerEnabled = enabled;
+        if (bands != null) {
+            short[] values = new short[5];
+            for (int i = 0; i < values.length; i++) {
+                values[i] = (short) Math.max(-1200, Math.min(1200, bands.optInt(i, 0)));
+            }
+            equalizerBands = values;
+        }
+    }
+
+    void setEqualizer(boolean enabled, JSONArray bands) {
+        configureEqualizer(enabled, bands);
+        if (prepared && mp != null) attachEqualizer(mp.getAudioSessionId());
+    }
+
+    private void attachEqualizer(int audioSessionId) {
+        try {
+            if (equalizer != null) {
+                equalizer.setEnabled(false);
+                equalizer.release();
+                equalizer = null;
+            }
+            equalizer = new Equalizer(0, audioSessionId);
+            short count = equalizer.getNumberOfBands();
+            short[] range = equalizer.getBandLevelRange();
+            for (short band = 0; band < count; band++) {
+                int source = count <= 1 ? 2 : Math.round((band * 4f) / (count - 1));
+                int level = equalizerBands[Math.max(0, Math.min(4, source))];
+                level = Math.max(range[0], Math.min(range[1], level));
+                equalizer.setBandLevel(band, (short) level);
+            }
+            equalizer.setEnabled(equalizerEnabled);
+        } catch (Exception e) {
+            if (equalizer != null) {
+                try { equalizer.release(); } catch (Exception ignored) {}
+                equalizer = null;
+            }
+        }
+    }
+
     void applyVolume() {
         try {
             if (mp != null && prepared) mp.setVolume(volume, volume);
@@ -705,14 +992,9 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         queue.clear();
         index = -1;
         wantPlay = false;
-        try {
-            audio.abandonAudioFocus(this);
-        } catch (Exception ignored) {
-        }
-        try {
-            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
-        } catch (Exception ignored) {
-        }
+        abandonFocus();
+        pausedByFocus = false;
+        releaseWifiLock();
         try {
             stopForeground(true);
         } catch (Exception ignored) {
@@ -782,6 +1064,87 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
     }
 
     // ---------- медиасессия и уведомление ----------
+    private Bitmap artwork(Item it) {
+        if (it == null) return null;
+        if (it.id.equals(remoteArtworkId) && remoteArtwork != null) return remoteArtwork;
+        if (it.art == null || !it.art.startsWith("data:image/")) return null;
+        try {
+            int comma = it.art.indexOf(',');
+            if (comma < 0) return null;
+            byte[] bytes = Base64.decode(it.art.substring(comma + 1), Base64.DEFAULT);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            int sample = 1;
+            while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 256) sample *= 2;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+            if (bitmap == null) return null;
+            int max = Math.max(bitmap.getWidth(), bitmap.getHeight());
+            if (max > 256) {
+                float scale = 256f / max;
+                Bitmap scaled = Bitmap.createScaledBitmap(bitmap, Math.max(1, Math.round(bitmap.getWidth() * scale)), Math.max(1, Math.round(bitmap.getHeight() * scale)), true);
+                if (scaled != bitmap) bitmap.recycle();
+                bitmap = scaled;
+            }
+            return bitmap;
+        } catch (Exception ignored) { return null; }
+    }
+
+    private void loadRemoteArtwork(final Item item) {
+        if (item == null || item.art == null || !item.art.startsWith("https://")) return;
+        final String requestedUrl = item.art;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                HttpURLConnection connection = null;
+                try {
+                    connection = (HttpURLConnection) new URL(requestedUrl).openConnection();
+                    connection.setConnectTimeout(5000);
+                    connection.setReadTimeout(7000);
+                    connection.setInstanceFollowRedirects(true);
+                    connection.setRequestProperty("User-Agent", "Dorozhka Android");
+                    if (connection.getResponseCode() < 200 || connection.getResponseCode() >= 300) return;
+                    java.io.InputStream input = connection.getInputStream();
+                    byte[] bytes;
+                    try {
+                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[8192];
+                        int count, total = 0;
+                        while ((count = input.read(buffer)) != -1 && total < 3145728) {
+                            output.write(buffer, 0, count);
+                            total += count;
+                        }
+                        bytes = output.toByteArray();
+                    } finally { input.close(); }
+                    BitmapFactory.Options bounds = new BitmapFactory.Options();
+                    bounds.inJustDecodeBounds = true;
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+                    int sample = 1;
+                    while (Math.max(bounds.outWidth / sample, bounds.outHeight / sample) > 256) sample *= 2;
+                    BitmapFactory.Options opts = new BitmapFactory.Options();
+                    opts.inSampleSize = sample;
+                    final Bitmap decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+                    if (decoded == null) return;
+                    handler.post(new Runnable() {
+                        @Override public void run() {
+                            if (current() != null && current().id.equals(item.id)) {
+                                if (remoteArtwork != null) remoteArtwork.recycle();
+                                remoteArtwork = decoded;
+                                remoteArtworkId = item.id;
+                                updateSession();
+                                updateNotification();
+                            } else decoded.recycle();
+                        }
+                    });
+                } catch (Exception ignored) {
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            }
+        }, "DorozhkaArtwork").start();
+    }
+
     private void updateSession() {
         if (session == null) return;
         Item it = current();
@@ -794,19 +1157,37 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         } catch (Exception ignored) {
         }
         if (it != null) {
-            session.setMetadata(new MediaMetadata.Builder()
+            Bitmap art = artwork(it);
+            MediaMetadata.Builder metadata = new MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_TITLE, it.title)
                     .putString(MediaMetadata.METADATA_KEY_ARTIST, it.artist)
                     .putString(MediaMetadata.METADATA_KEY_ALBUM, it.album)
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, dur)
-                    .build());
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, dur);
+            if (art != null) {
+                metadata.putBitmap(MediaMetadata.METADATA_KEY_ART, art);
+                metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art);
+            }
+            session.setMetadata(metadata.build());
+        }
+        updatePlaybackState();
+    }
+
+    private void updatePlaybackState() {
+        if (session == null) return;
+        int pos = 0;
+        try {
+            if (mp != null && prepared) pos = mp.getCurrentPosition();
+        } catch (Exception ignored) {
         }
         int st = isPlaying() ? PlaybackState.STATE_PLAYING
                 : (wantPlay && !prepared ? PlaybackState.STATE_BUFFERING : PlaybackState.STATE_PAUSED);
         long actions = PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE
                 | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS
                 | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP;
-        session.setPlaybackState(new PlaybackState.Builder().setActions(actions).setState(st, pos, 1f).build());
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(actions)
+                .setState(st, pos, 1f, SystemClock.elapsedRealtime())
+                .build());
     }
 
     private void ensureChannel() {
@@ -842,9 +1223,17 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         b.setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle(title)
                 .setContentText(text)
+                .setCategory(Notification.CATEGORY_TRANSPORT)
+                .setPriority(Notification.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+        Bitmap art = artwork(it);
+        if (art != null) b.setLargeIcon(art);
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (open != null) {
             b.setContentIntent(PendingIntent.getActivity(this, 0, open,
@@ -857,7 +1246,8 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
         b.addAction(action(android.R.drawable.ic_menu_close_clear_cancel, "Закрыть", "STOP", 4));
         b.setStyle(new Notification.MediaStyle()
                 .setMediaSession(session.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2));
+                .setShowActionsInCompactView(0, 1, 2))
+                .setDeleteIntent(control("STOP", 4));
         return b.build();
     }
 
@@ -881,27 +1271,31 @@ public class PlaybackService extends Service implements AudioManager.OnAudioFocu
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        stopAll();
+        // Не останавливаем медиасервис при свайпе приложения из списка последних.
         super.onTaskRemoved(rootIntent);
     }
 
     @Override
     public void onDestroy() {
-        instance = null;
+        synchronized (POST_LOCK) {
+            if (instance == this) instance = null;
+            startingService = false;
+            pendingCommands.clear();
+        }
         handler.removeCallbacks(ticker);
+        if (remoteArtwork != null) { remoteArtwork.recycle(); remoteArtwork = null; }
         try {
             unregisterReceiver(noisy);
         } catch (Exception ignored) {
         }
         releasePlayer();
-        try {
-            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
-        } catch (Exception ignored) {
-        }
+        releaseWifiLock();
+        abandonFocus();
         if (session != null) {
             session.setActive(false);
             session.release();
         }
+        PlaybackPlugin.emit("stopped", new JSObject());
         super.onDestroy();
     }
 }
@@ -915,27 +1309,94 @@ for name, code in FILES.items():
 with open(MANIFEST, encoding="utf-8") as f:
     m = f.read()
 
-if "PlaybackService" not in m:
-    perms = (
-        '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n'
-        '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />\n'
-        '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
-        '    <uses-permission android:name="android.permission.WAKE_LOCK" />\n'
-    )
-    comps = (
+# Разрешения проверяются независимо от компонентов: повторный запуск должен
+# исправлять неполный манифест, а не пропускать его целиком.
+for permission in (
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.WAKE_LOCK",
+):
+    if 'android:name="' + permission + '"' not in m:
+        m, count = re.subn(
+            r"(<manifest\b[^>]*>)",
+            lambda match: match.group(1) + '\n    <uses-permission android:name="' + permission + '" />',
+            m,
+            count=1,
+        )
+        if count != 1:
+            sys.exit("Не удалось добавить разрешение " + permission)
+
+if PKG + ".PlaybackService" not in m:
+    service = (
         '        <service android:name="' + PKG + '.PlaybackService" android:exported="false"'
         ' android:foregroundServiceType="mediaPlayback" />\n'
-        '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\n'
     )
-    m, n1 = re.subn(r"(\s*)<application", "\n" + perms + r"\1<application", m, count=1)
-    m, n2 = re.subn(r"</application>", comps + "    </application>", m, count=1)
-    if n1 != 1 or n2 != 1:
-        sys.exit("Не удалось изменить AndroidManifest.xml")
+    m, count = re.subn(r"</application>", service + "    </application>", m, count=1)
+    if count != 1:
+        sys.exit("Не удалось добавить PlaybackService")
+
+if PKG + ".ControlReceiver" not in m:
+    receiver = '        <receiver android:name="' + PKG + '.ControlReceiver" android:exported="false" />\n'
+    m, count = re.subn(r"</application>", receiver + "    </application>", m, count=1)
+    if count != 1:
+        sys.exit("Не удалось добавить ControlReceiver")
+
+with open(MANIFEST, "w", encoding="utf-8") as f:
+    f.write(m)
+print("AndroidManifest.xml: разрешения и компоненты проверены")
+
+# ---- резервные зеркала Maven Central для нестабильной доступности основного хоста ----
+def add_maven_mirrors(path):
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        source = f.read()
+    if "repo1.maven.org/maven2" in source and "maven-central.storage-download.googleapis.com/maven2" in source:
+        return
+    if path.endswith(".kts"):
+        mirror_lines = (
+            '        maven("https://repo1.maven.org/maven2")\n'
+            '        maven("https://maven-central.storage-download.googleapis.com/maven2/")\n'
+        )
+    else:
+        mirror_lines = (
+            '        maven { url "https://repo1.maven.org/maven2" }\n'
+            '        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }\n'
+        )
+    source, count = re.subn(r"(\brepositories\s*\{)", lambda match: match.group(1) + "\n" + mirror_lines, source)
+    if count:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(source)
+        print("Добавлены резервные Maven-репозитории:", os.path.basename(path))
+    else:
+        print("В Gradle-файле не найден блок repositories:", os.path.basename(path))
+
+for gradle_name in ("settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts"):
+    add_maven_mirrors(os.path.join(ROOT, "android", gradle_name))
+
+# ---- Spotify OAuth deep link ----
+if 'android:host="spotify-callback"' not in m:
+    activity_tags = list(re.finditer(r'<activity\b[^>]*>', m))
+    match = next((item for item in activity_tags if 'MainActivity' in item.group(0)), None)
+    if not match:
+        sys.exit("Не найдена MainActivity для Spotify OAuth deep link. Activity tags: " +
+                 repr([item.group(0) for item in activity_tags]))
+    tag = match.group(0)
+    if 'android:launchMode=' not in tag:
+        tag = tag[:-1] + ' android:launchMode="singleTask">'
+    intent_filter = (
+        '\n            <intent-filter>\n'
+        '                <action android:name="android.intent.action.VIEW" />\n'
+        '                <category android:name="android.intent.category.DEFAULT" />\n'
+        '                <category android:name="android.intent.category.BROWSABLE" />\n'
+        '                <data android:scheme="doroshka" android:host="spotify-callback" />\n'
+        '            </intent-filter>'
+    )
+    m = m[:match.start()] + tag + intent_filter + m[match.end():]
     with open(MANIFEST, "w", encoding="utf-8") as f:
         f.write(m)
-    print("AndroidManifest.xml обновлён")
-else:
-    print("AndroidManifest.xml уже обновлён")
+    print("Spotify OAuth deep link добавлен в AndroidManifest.xml")
 
 # ---- capacitor.config.json: запросы идут через нативный HTTP (без ограничений CORS) ----
 import json
