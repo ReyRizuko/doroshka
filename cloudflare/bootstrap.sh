@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 DB_NAME="${D1_DATABASE_NAME:-doroshka-music}"
-BUCKET_NAME="${R2_BUCKET_NAME:-doroshka-music-audio}"
 
 command -v npx >/dev/null 2>&1 || { echo "Node.js/npm is required." >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "Python 3 is required to update wrangler.toml." >&2; exit 1; }
@@ -50,15 +49,13 @@ if count != 1:
 path.write_text(updated)
 PY
 
-echo "Ensuring R2 bucket exists: $BUCKET_NAME"
-if ! npx wrangler r2 bucket list 2>/dev/null | grep -Fq "$BUCKET_NAME"; then
-  npx wrangler r2 bucket create "$BUCKET_NAME"
-fi
-
 echo "Applying D1 migrations..."
 npx wrangler d1 migrations apply "$DB_NAME" --remote
+
+echo "Loading licensed public-domain test tracks..."
+npx wrangler d1 execute "$DB_NAME" --remote --file=cloudflare/seed.sql
 
 echo "Deploying Worker..."
 npx wrangler deploy
 
-echo "Cloudflare setup complete. D1 database ID was written to wrangler.toml."
+echo "Cloudflare setup complete. D1 ID written to wrangler.toml; demo tracks loaded."
